@@ -2,24 +2,28 @@ import glob
 import exifread
 import googlemaps
 import re
+import pickle
 import json
 
-#Google Geocoding API key
-KEY = ''
-KEY_FILE = "D:\\temp\\keyfile.txt"
 
+# Google Geocoding API key
+GOOGLE_API_KEY = ""
+GOOGLE_API_KEY_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\keyfile.txt"
+
+JPG_DIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek"
+EXIF_DB_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\exif_db.db"
 # based on https://gist.github.com/erans/983821
 
 
 def read_api_key_from_file():
-    if KEY_FILE != "":
+    if GOOGLE_API_KEY_FILE != "":
         try:
-            f = open(KEY_FILE, "r")
+            f = open(GOOGLE_API_KEY_FILE, "r")
         except IOError:
-            print("IOError opening key file: " + KEY_FILE + ". Using script's KEY variable.")
+            print("IOError opening key file: " + GOOGLE_API_KEY_FILE + ". Using script's GOOGLE_API_KEY variable.")
         else:
-            global KEY
-            KEY = f.readline().rstrip()
+            global GOOGLE_API_KEY
+            GOOGLE_API_KEY = f.readline().rstrip()
             f.close()
 
 
@@ -30,9 +34,9 @@ def _get_if_exist(data, key):
     return None
 
 
-def _convert_to_degress(value):
+def _convert_to_degrees(value):
     """
-    Helper function to convert the GPS coordinates stored in the EXIF to degress in float format
+    Helper function to convert the GPS coordinates stored in the EXIF to degrees in float format
     :param value:
     :type value: exifread.utils.Ratio
     :rtype: float
@@ -57,11 +61,11 @@ def get_exif_location(exif_data):
     gps_longitude_ref = _get_if_exist(exif_data, 'GPS GPSLongitudeRef')
 
     if gps_latitude and gps_latitude_ref and gps_longitude and gps_longitude_ref:
-        lat = _convert_to_degress(gps_latitude)
+        lat = _convert_to_degrees(gps_latitude)
         if gps_latitude_ref.values[0] != 'N':
             lat = 0 - lat
 
-        lon = _convert_to_degress(gps_longitude)
+        lon = _convert_to_degrees(gps_longitude)
         if gps_longitude_ref.values[0] != 'E':
             lon = 0 - lon
 
@@ -69,8 +73,8 @@ def get_exif_location(exif_data):
 
 
 def gettags(filelist):
-    "input: list of files"
-    "return: list of EXIF tags as dictionaries"
+    """input: list of files
+    return: list of EXIF tags as dictionaries"""
 
     taglist = list()
     for filename in filelist:
@@ -86,8 +90,8 @@ def gettags(filelist):
 
 
 def printtags(taglist):
-    "input: list of tags"
-    "return: none"
+    """input: list of tags
+    return: none"""
 
     #print(json.dumps(taglist, indent=4, ensure_ascii=False))
     #return
@@ -105,8 +109,8 @@ def printtags(taglist):
 
 
 def filtertags(taglist):
-    "input: list of tags"
-    "return: only the list of location related tags"
+    """input: list of tags
+    return: only the list of location related tags"""
 
     smalllist = list ()
     for item in taglist:
@@ -124,17 +128,16 @@ def filtertags(taglist):
 
 
 def add_decimal_GPS(taglist):
-    "Funcion we need to convert the strange EXIF Coordinates to decimals values"
-    "so we can use them with google"
-    "if we find the cooridnates we will add mylat and mylon to the item"
-    "input list of EXIF tags"
+    """Funcion we need to convert the strange EXIF Coordinates to decimals values
+    so we can use them with google
+    if we find the cooridnates we will add mylat and mylon to the item
+    input list of EXIF tags"""
     for item in taglist:
         if "GPS GPSLongitude" in item.keys():
             if "GPS GPSLatitude" in item.keys():
                 lat,lon = get_exif_location(item)
                 item["mylat"]=lat
                 item["mylon"]=lon
-    # TODO: miert modositja az eredeti listat a fuggveny?
     return
 
 
@@ -152,60 +155,110 @@ def propose_name(item):
     address=item["formatted_address_list"][2]
     return date+"_"+address
 
+
+def add_google_maps_info(my_list, google_api_key):
+    """ Enhances a list of EXIF info with the Google Maps API location information """
+
+    gmaps = googlemaps.Client(key=google_api_key)
+    for item in my_list:
+        if "mylat" in item.keys() and "mylon" in item.keys():
+            mylat = item["mylat"]
+            mylon = item["mylon"]
+            reverse_geocode_result = gmaps.reverse_geocode((mylat, mylon))
+            if len(reverse_geocode_result) > 0:
+                item["reverse_geocode"] = reverse_geocode_result
+                item["formatted_address_list"] = list()
+                for resultitem in reverse_geocode_result:
+                    item["formatted_address_list"].append(resultitem["formatted_address"])
+                # I think level 2 address was ok
+                item["myaddress"] = item["formatted_address_list"][2]
+                item["rename_to"] = propose_name(item)
+
+
+def save_list_to_file(my_list, my_file):
+    """ Saves a list to file with the pickle module. Returns False if file can't be open for writing, True otherwise"""
+
+    try:
+        f = open(my_file, "wb")
+    except IOError:
+        print("Can't open file: {} for writing.".format(my_file))
+        return False
+    for i in my_list:
+        pickle.dump(i, f, pickle.HIGHEST_PROTOCOL)
+    f.close()
+    return True
+
+
+def read_list_from_file(my_file):
+    """ Returns a list where items are read from a file with the pickle module. """
+
+    my_list = []
+    try:
+        f = open(my_file, "rb")
+    except IOError:
+        print("Can't open file: {} for reading.".format(my_file))
+        return []
+    while True:
+        try:
+            i = pickle.load(f)
+        except pickle.PickleError:
+            print("Invalid file format, cannot read data.")
+            break
+        except EOFError:
+            break
+        else:
+            my_list.append(i)
+    f.close()
+    return my_list
+
+
+def join_pickle_dump_files(out_file, in_file1, in_file2):
+    """ Copies the content of two pickle dump files into a single file. Returns True on success.
+    TODO: This method requires heaps of memory, but lazy programmers don't care about memory consumption. Fix it!"""
+
+    my_list1 = read_list_from_file(in_file1)
+    my_list2 = read_list_from_file(in_file2)
+
+    return save_list_to_file(my_list1+my_list2, out_file)
+
+
+def filter_processed_files(file_list, db_file):
+    """ Removes the items from file_list which have been processed already. """
+
+    processed_list = read_list_from_file(EXIF_DB_FILE)
+
+    # TODO: finish this method
+
+
 #
 # main
 #
+if __name__ == "__main__":
+    read_api_key_from_file()
+    filelist = findjpg(JPG_DIR)
+    number_of_files_found = len(filelist)
+    print("Found {} files to scan".format(number_of_files_found))
 
-read_api_key_from_file()
-filelist = findjpg("C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek")
-number_of_files_found = len(filelist)
-print("Found {} files to scan".format(number_of_files_found))
+    filter_processed_files(filelist, EXIF_DB_FILE)
+    print("Number of files to process after filtering: {}".format(len(filelist)))
 
-#Collect EXIF info from all JPG images
-taglist=gettags(filelist)
+    #Collect EXIF info from all JPG images
+    taglist = gettags(filelist)
 
-#Filter down this list a bit, since I do not need this many
-# info
-# Might want to skip this step
-smalllist=filtertags(taglist)
+    #Filter down this list a bit, since I do not need this many
+    # info
+    # Might want to skip this step
+    smalllist = filtertags(taglist)
 
-#Add decimal GPS info to the list items
-#the new tags will be mylat and mylon
-add_decimal_GPS(smalllist)
+    #Add decimal GPS info to the list items
+    #the new tags will be mylat and mylon
+    add_decimal_GPS(smalllist)
 
-#
-# Query google for info
-gmaps = googlemaps.Client(key=KEY)
-for item in smalllist:
-    if "mylat" in item.keys() and "mylon" in item.keys():
-        mylat=item["mylat"]
-        mylon=item["mylon"]
-        reverse_geocode_result = gmaps.reverse_geocode((mylat, mylon))
-        if( len(reverse_geocode_result) > 0):
-            item["reverse_geocode"] = reverse_geocode_result
-            item["formatted_address_list"] = list()
-            for resultitem in reverse_geocode_result:
-                item["formatted_address_list"].append(resultitem["formatted_address"])
-            # I think level 2 address was ok
-            item["myaddress"]=item["formatted_address_list"][2]
-            item["rename_to"]=propose_name(item)
+    add_google_maps_info(smalllist, GOOGLE_API_KEY)
 
-printtags(smalllist)
+    printtags(smalllist)
 
-import pickle
-""" A pickle.dumps serializalja a dict objecttet, most eppen egy string-be (.dump file-ba)"""
-x = pickle.dumps(smalllist[0]) #`, pickle.HIGHEST_PROTOCOL)
+    # save_list_to_file(smalllist, EXIF_DB_FILE)
 
-""" A pickle.loads meg visszaalakitja, es igy nez ki hogy megratja az ifdtag-eket"""
-y = pickle.loads(x)
-
-"""
-
-Python's parameter passing acts a bit different than the languages you're probably used to. Instead of having explicit 
-pass by value and pass by reference semantics, python has pass by name. You are essentially always passing the object 
-itself, and the object's mutability determines whether or not it can be modified. Lists and Dicts are mutable objects. 
-Numbers, Strings, and Tuples are not.
-
-You are passing the dictionary to the function, not a copy. Thus when you modify it, you are also modifying the original 
-copy.
-"""
+    # new_small_list = read_list_from_file(EXIF_DB_FILE)
+    # printtags(new_small_list)
