@@ -8,11 +8,14 @@ import json
 
 # Google Geocoding API key
 GOOGLE_API_KEY = ""
-GOOGLE_API_KEY_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\keyfile.txt"
+#GOOGLE_API_KEY_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\keyfile.txt"
+GOOGLE_API_KEY_FILE = "D:\\temp\\keyfile.txt"
 
-JPG_DIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek"
-EXIF_DB_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\exif_db.db"
-# based on https://gist.github.com/erans/983821
+#JPG_DIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek"
+JPG_DIR = "D:\\temp\\kepek"
+
+#EXIF_DB_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\exif_db.db"
+EXIF_DB_FILE = "D:\\temp\\kepek\\exif_db.db"
 
 
 def read_api_key_from_file():
@@ -26,7 +29,8 @@ def read_api_key_from_file():
             GOOGLE_API_KEY = f.readline().rstrip()
             f.close()
 
-
+# Few functions to interpret exif data
+# based on https://gist.github.com/erans/983821
 def _get_if_exist(data, key):
     if key in data:
         return data[key]
@@ -70,6 +74,48 @@ def get_exif_location(exif_data):
             lon = 0 - lon
 
     return lat, lon
+
+
+#
+# My code again
+#
+
+def distance(lat1,lon1,lat2,lon2):
+    """
+    :param lat1: Make sure it is in decimal format (not in radians)
+    :param lon1: 
+    :param lat2: 
+    :param lon2: 
+    :return: Returns the great circle distance between 2 points 
+    """
+
+    from math import sin, cos, sqrt, atan2, radians
+
+    # approximate radius of earth in km
+    R = 6373.0
+
+    lat1 = radians(lat1)
+    lon1 = radians(lon1)
+    lat2 = radians(lat2)
+    lon2 = radians(lon2)
+
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+
+    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+    distance = R * c
+
+    return( distance )
+
+
+def getsamedaypics(taglist):
+    """
+    :param taglist: list of collected tags
+    :return: list of pictures from the same day
+    TODO: Ezt úgy kéne megírni, hogy valami iteralhatót adjon vissza
+    """
 
 
 def gettags(filelist):
@@ -222,13 +268,28 @@ def join_pickle_dump_files(out_file, in_file1, in_file2):
     return save_list_to_file(my_list1+my_list2, out_file)
 
 
-def filter_processed_files(file_list, db_file):
+def remove_processed_files(file_list, processed_tag_list):
     """ Removes the items from file_list which have been processed already. """
 
-    processed_list = read_list_from_file(EXIF_DB_FILE)
+
+    files_in_processed_list = list()
+    for item in processed_tag_list:
+        files_in_processed_list.append(item["myfilename"])
+
+    for filename in files_in_processed_list:
+        if filename in file_list:
+            file_list.remove(filename)
+
 
     # TODO: finish this method
+    # TODO: Discuss this: https://stackoverflow.com/questions/1207406/how-to-remove-items-from-a-list-while-iterating
+    # What are they speaking about?
+    #for filename in file_list:
+    #    for item in processed_tag_list:
+    #        if filename == item["myfilename"]:
+    #            file_list.remove(filename)
 
+    return
 
 #
 # main
@@ -239,7 +300,8 @@ if __name__ == "__main__":
     number_of_files_found = len(filelist)
     print("Found {} files to scan".format(number_of_files_found))
 
-    filter_processed_files(filelist, EXIF_DB_FILE)
+    processed_tag_list = read_list_from_file(EXIF_DB_FILE)
+    remove_processed_files(filelist, processed_tag_list)
     print("Number of files to process after filtering: {}".format(len(filelist)))
 
     #Collect EXIF info from all JPG images
@@ -258,7 +320,14 @@ if __name__ == "__main__":
 
     printtags(smalllist)
 
-    # save_list_to_file(smalllist, EXIF_DB_FILE)
+    if( len(processed_tag_list) == 0):
+        new_processed_list = smalllist
+    else:
+        new_processed_list = processed_tag_list + smalllist
 
-    # new_small_list = read_list_from_file(EXIF_DB_FILE)
-    # printtags(new_small_list)
+    save_list_to_file(new_processed_list, EXIF_DB_FILE)
+
+
+    printtags(new_processed_list)
+
+    print("Distance: {} km".format(distance(-33.84266944444445,151.17260833333333,47.63259166666667,19.142563888888887)))
