@@ -109,14 +109,16 @@ def distance(lat1,lon1,lat2,lon2):
 
     return( distance )
 
+def printabledatatime(tag):
+    return tag["EXIF DateTimeOriginal"].printable
 
 def sort_tags_byexifdata(taglist):
     """
-    TODO: Sort list of exif tags by EXIF attribute Original Date Time
+    Sort list of exif tags by EXIF attribute Original Date Time
     :param taglist:
     :return: modifies original list
     """
-
+    taglist.sort(key=printabledatatime)
     return
 
 
@@ -283,8 +285,6 @@ def remove_processed_files(file_list, processed_tag_list):
         if filename in file_list:
             file_list.remove(filename)
 
-
-    # TODO: finish this method
     # TODO: Discuss this: https://stackoverflow.com/questions/1207406/how-to-remove-items-from-a-list-while-iterating
     # What are they speaking about?
     #for filename in file_list:
@@ -328,7 +328,10 @@ if __name__ == "__main__":
     else:
         new_processed_list = processed_tag_list + smalllist
 
+    sort_tags_byexifdata(new_processed_list)
+
     save_list_to_file(new_processed_list, EXIF_DB_FILE)
+
 
 
     printtags(new_processed_list)

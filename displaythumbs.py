@@ -100,17 +100,19 @@ def update_address_labels():
     """
     global lbl_google0, lbl_google1, lbl_google2, lbl_google3
 
+    a_date = "   "+ processed_tag_list[current_tag]["EXIF DateTimeOriginal"].printable[:10]
+
     print("Google0 {}".format(processed_tag_list[current_tag]["formatted_address_list"][0]))
-    lbl_google0["text"] = processed_tag_list[current_tag]["formatted_address_list"][0]
+    lbl_google0["text"] = processed_tag_list[current_tag]["formatted_address_list"][0] + a_date
 
     print("Google1 {}".format(processed_tag_list[current_tag]["formatted_address_list"][1]))
-    lbl_google1["text"] = processed_tag_list[current_tag]["formatted_address_list"][1]
+    lbl_google1["text"] = processed_tag_list[current_tag]["formatted_address_list"][1] + a_date
 
     print("Google2 {}".format(processed_tag_list[current_tag]["formatted_address_list"][2]))
-    lbl_google2["text"] = processed_tag_list[current_tag]["formatted_address_list"][2]
+    lbl_google2["text"] = processed_tag_list[current_tag]["formatted_address_list"][2] + a_date
 
     print("Google3 {}".format(processed_tag_list[current_tag]["formatted_address_list"][3]))
-    lbl_google3["text"] = processed_tag_list[current_tag]["formatted_address_list"][3]
+    lbl_google3["text"] = processed_tag_list[current_tag]["formatted_address_list"][3] + a_date
 
     return
 
@@ -210,17 +212,18 @@ def main():
     # Creating next row of UI
     lbl_a = Label( abl1, text = " A ")
     lbl_a.grid( row = currentrow, column = 0)
-    scl_withintime = Scale( abl1, orient=HORIZONTAL, showvalue=15 )
-    scl_withintime.grid( row = currentrow, column = 1)
-    lbl_numberofpic = Label (abl1, text = " belül készült képek száma  xxxx db")
-    lbl_numberofpic.grid( row = currentrow, column = 2)
+    scl_withintime = Scale( abl1, orient=HORIZONTAL, length = 300, to=300 )
+    scl_withintime.set(15)
+    scl_withintime.grid( row = currentrow, column = 1, columnspan = 3)
+    lbl_numberofpic = Label (abl1, text = " percen belül készült képek száma  xxxx db")
+    lbl_numberofpic.grid( row = currentrow, column = 4)
     currentrow = currentrow + 1
 
     # Creating next row of UI
     lbl_renameto =     Label (abl1, text = "Rename to")
     lbl_renameto.grid( row =currentrow, column = 0 )
-    entry_renameto =   Entry (abl1, text = "default rename to")
-    entry_renameto.grid( row = currentrow, column = 1)
+    entry_renameto =   Entry (abl1, text = "default rename to", width = 100)
+    entry_renameto.grid( row = currentrow, column = 1, columnspan = 3 )
     currentrow = currentrow + 1
 
     # Creating next row of UI
