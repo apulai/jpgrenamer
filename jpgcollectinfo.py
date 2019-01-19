@@ -110,12 +110,15 @@ def distance(lat1,lon1,lat2,lon2):
     return( distance )
 
 
-def getsamedaypics(taglist):
+def sort_tags_byexifdata(taglist):
     """
-    :param taglist: list of collected tags
-    :return: list of pictures from the same day
-    TODO: Ezt úgy kéne megírni, hogy valami iteralhatót adjon vissza
+    TODO: Sort list of exif tags by EXIF attribute Original Date Time
+    :param taglist:
+    :return: modifies original list
     """
+
+    return
+
 
 
 def gettags(filelist):
