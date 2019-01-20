@@ -169,17 +169,34 @@ def main():
     abl1 = Tk()
 
     # Creating first row of UI
-    btn_file = Button(abl1, text="File", command=cb_file)
-    btn_scan = Button(abl1, text="Scan", command=cb_scan)
-    btn_update = Button(abl1, text="Update Metadata DB", command=cb_updatedb)
-    btn_save = Button(abl1,text="Save Metadata DB", command=cb_save)
-    btn_rename = Button(abl1,text="Rename file", command=cb_rename)
-    btn_file.grid   ( row=currentrow, column =0, sticky = W)
-    btn_scan.grid   ( row=currentrow, column =1, sticky = W)
-    btn_update.grid ( row=currentrow, column =2, sticky = W)
-    btn_save.grid   ( row=currentrow, column =3, sticky = W)
-    btn_rename.grid ( row=currentrow, column =4, sticky = W)
-    currentrow = currentrow + 1
+    menubar = Menu(abl1)
+    filemenu = Menu(menubar,tearoff = 0 )
+    filemenu.add_command(label="Select folder ...", command=cb_file)
+    filemenu.add_command(label="Select db file...", command=cb_file)
+    filemenu.add_command(label="Save db ...", command=cb_save)
+    filemenu.add_command(label="Quit", command=exit)
+
+    menubar.add_cascade(label = "File", menu = filemenu)
+    menubar.add_cascade(label = "Scan folder", command=cb_scan)
+    menubar.add_cascade(label = "Rename source files", command=cb_rename)
+    menubar.add_cascade(label="Help")
+
+    abl1.config(menu=menubar)
+    #menubar.gird( row=currentrow, column =0, sticky = W, columnspan = 5 )
+    #currentrow = currentrow + 1
+
+    #btn_file = Button(abl1, text="File", command=cb_file)
+    #btn_scan = Button(abl1, text="Scan", command=cb_scan)
+    #btn_update = Button(abl1, text="Update Metadata DB", command=cb_updatedb)
+    #btn_save = Button(abl1,text="Save Metadata DB", command=cb_save)
+    #btn_rename = Button(abl1,text="Rename file", command=cb_rename)
+    #btn_file.grid   ( row=currentrow, column =0, sticky = W)
+    #btn_scan.grid   ( row=currentrow, column =1, sticky = W)
+    #btn_update.grid ( row=currentrow, column =2, sticky = W)
+    #btn_save.grid   ( row=currentrow, column =3, sticky = W)
+    #btn_rename.grid ( row=currentrow, column =4, sticky = W)
+    #currentrow = currentrow + 1
+
 
     # Creating next row of UI
     # This is a frame and a canvas in the frame
