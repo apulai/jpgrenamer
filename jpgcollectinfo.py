@@ -28,6 +28,7 @@ def read_api_key_from_file():
             global GOOGLE_API_KEY
             GOOGLE_API_KEY = f.readline().rstrip()
             f.close()
+            return GOOGLE_API_KEY
 
 # Few functions to interpret exif data
 # based on https://gist.github.com/erans/983821
@@ -203,7 +204,11 @@ def propose_name(item):
     # Remove : from date
     date = re.sub(":","",date)
     # I think level 2 address was ok
-    address=item["formatted_address_list"][2]
+    try:
+        address=item["formatted_address_list"][2]
+    except KeyError:
+        address=item["formatted_address_list"][0]
+
     return date+"_"+address
 
 
@@ -222,7 +227,11 @@ def add_google_maps_info(my_list, google_api_key):
                 for resultitem in reverse_geocode_result:
                     item["formatted_address_list"].append(resultitem["formatted_address"])
                 # I think level 2 address was ok
-                item["myaddress"] = item["formatted_address_list"][2]
+                # Let's see that exists...
+                try:
+                    item["myaddress"] = item["formatted_address_list"][2]
+                except KeyError:
+                    item["myaddress"] = item["formatted_address_list"][0]
                 item["rename_to"] = propose_name(item)
 
 
@@ -298,38 +307,54 @@ def remove_processed_files(file_list, processed_tag_list):
 # main
 #
 if __name__ == "__main__":
+
     read_api_key_from_file()
+
+    # List the files in JPG_DIR
     filelist = findjpg(JPG_DIR)
     number_of_files_found = len(filelist)
     print("Found {} files to scan".format(number_of_files_found))
 
+    # Load the database file
+    # We have data in this DB from the files scanned
+    # earlier
     processed_tag_list = read_list_from_file(EXIF_DB_FILE)
+
+    # We will narrow down the list of files
+    # so we will check only new files not found in our DB
     remove_processed_files(filelist, processed_tag_list)
     print("Number of files to process after filtering: {}".format(len(filelist)))
 
     #Collect EXIF info from all JPG images
     taglist = gettags(filelist)
 
-    #Filter down this list a bit, since I do not need this many
-    # info
+    #Filter down this list a bit, since I do not need this many info
     # Might want to skip this step
     smalllist = filtertags(taglist)
 
     #Add decimal GPS info to the list items
     #the new tags will be mylat and mylon
     add_decimal_GPS(smalllist)
-
+    # Log on to google geomap API
+    # to collect "address" information based on GPS coordinates
     add_google_maps_info(smalllist, GOOGLE_API_KEY)
 
+    #Check
     printtags(smalllist)
 
+    # We will have to concatenate
+    # the list of fresh files
+    # with the list of already processed files
     if( len(processed_tag_list) == 0):
         new_processed_list = smalllist
     else:
         new_processed_list = processed_tag_list + smalllist
 
+    # quick sort by date
     sort_tags_byexifdate(new_processed_list)
 
+    # And we will save info back to
+    # the database
     save_list_to_file(new_processed_list, EXIF_DB_FILE)
 
 

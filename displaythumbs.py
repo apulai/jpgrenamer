@@ -12,28 +12,95 @@ DEFAULTDIR = "D:\\temp\\kepek\\"
 CANVAS_WIDTH = 500
 CANVAS_HIGHT = 500
 
+# Google Geocoding API key
+GOOGLE_API_KEY = ""
+#GOOGLE_API_KEY_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\keyfile.txt"
+GOOGLE_API_KEY_FILE = "D:\\temp\\keyfile.txt"
+
+
 current_tag=0
 processed_tag_list = ()
 
 def cb_file():
     global abl1
+    global DEFAULTDIR
     print("cb file")
     #abl1.filename = filedialog.askopenfilename(initialdir = DEFAULTDIR,title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
     abl1.filename = filedialog.askdirectory(initialdir=DEFAULTDIR, title="Select folder")
     print (abl1.filename)
+    DEFAULTDIR=abl1.filename
     return
 
 def cb_datafile():
     global abl1
+    global EXIF_DB_FILE
     print("cb data file")
-    abl1.dbfilename = filedialog.askopenfilename(initialdir = abl1.filename,title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
-    print(abl1.dbfilename)
+    abl1.dbfilename = filedialog.askopenfilename(initialdir = abl1.filename,title = "Select file",filetypes = (("EXIF db pickle","*.db"),("all files","*.*")))
+
+    if( abl1.dbfilename == ""):
+        EXIF_DB_FILE=DEFAULTDIR+"/"+"exif_db.db"
+
+    else:
+        EXIF_DB_FILE=abl1.dbfilename
+
+    print(EXIF_DB_FILE)
     return
 
 
 def cb_scan():
     print("cb scan")
+    global GOOGLE_API_KEY
+    global processed_tag_list
 
+    GOOGLE_API_KEY = jpgcollectinfo.read_api_key_from_file()
+
+    # List the files in JPG_DIR
+    filelist = jpgcollectinfo.findjpg(DEFAULTDIR)
+    number_of_files_found = len(filelist)
+    print("Found {} files to scan".format(number_of_files_found))
+
+    # Load the database file
+    # We have data in this DB from the files scanned
+    # earlier
+    processed_tag_list = jpgcollectinfo.read_list_from_file(EXIF_DB_FILE)
+
+    # We will narrow down the list of files
+    # so we will check only new files not found in our DB
+    jpgcollectinfo.remove_processed_files(filelist, processed_tag_list)
+    print("Number of files to process after filtering: {}".format(len(filelist)))
+
+    # Collect EXIF info from all JPG images
+    taglist = jpgcollectinfo.gettags(filelist)
+
+    # Filter down this list a bit, since I do not need this many info
+    # Might want to skip this step
+    smalllist = jpgcollectinfo.filtertags(taglist)
+
+    # Add decimal GPS info to the list items
+    # the new tags will be mylat and mylon
+    jpgcollectinfo.add_decimal_GPS(smalllist)
+    # Log on to google geomap API
+    # to collect "address" information based on GPS coordinates
+    jpgcollectinfo.add_google_maps_info(smalllist, GOOGLE_API_KEY)
+
+    # Check
+    jpgcollectinfo.printtags(smalllist)
+
+    # We will have to concatenate
+    # the list of fresh files
+    # with the list of already processed files
+    if (len(processed_tag_list) == 0):
+        new_processed_list = smalllist
+    else:
+        new_processed_list = processed_tag_list + smalllist
+
+    # quick sort by date
+    jpgcollectinfo.sort_tags_byexifdate(new_processed_list)
+
+    processed_tag_list = new_processed_list
+
+    # Display the first pic
+    cb_start()
     return
 
 def cb_updatedb():
@@ -119,17 +186,39 @@ def update_address_labels():
 
     a_date = "   "+ processed_tag_list[current_tag]["EXIF DateTimeOriginal"].printable[:10]
 
-    print("Google0 {}".format(processed_tag_list[current_tag]["formatted_address_list"][0]))
-    lbl_google0["text"] = processed_tag_list[current_tag]["formatted_address_list"][0] + a_date
+    try:
+        print("Google0 {}".format(processed_tag_list[current_tag]["formatted_address_list"][0]))
+        lbl_google0["text"] = processed_tag_list[current_tag]["formatted_address_list"][0] + a_date
+    except KeyError:
+        lbl_google0["text"] = "" + a_date
+    except IndexError:
+        lbl_google0["text"] = "" + a_date
 
-    print("Google1 {}".format(processed_tag_list[current_tag]["formatted_address_list"][1]))
-    lbl_google1["text"] = processed_tag_list[current_tag]["formatted_address_list"][1] + a_date
+    try:
+        print("Google1 {}".format(processed_tag_list[current_tag]["formatted_address_list"][1]))
+        lbl_google1["text"] = processed_tag_list[current_tag]["formatted_address_list"][1] + a_date
+    except KeyError:
+        lbl_google1["text"] = "" + a_date
+    except IndexError:
+        lbl_google1["text"] = "" + a_date
 
-    print("Google2 {}".format(processed_tag_list[current_tag]["formatted_address_list"][2]))
-    lbl_google2["text"] = processed_tag_list[current_tag]["formatted_address_list"][2] + a_date
+    try:
+        print("Google2 {}".format(processed_tag_list[current_tag]["formatted_address_list"][2]))
+        lbl_google2["text"] = processed_tag_list[current_tag]["formatted_address_list"][2] + a_date
+    except KeyError:
+        lbl_google2["text"] = "" + a_date
+    except IndexError:
+        lbl_google2["text"] = "" + a_date
 
-    print("Google3 {}".format(processed_tag_list[current_tag]["formatted_address_list"][3]))
-    lbl_google3["text"] = processed_tag_list[current_tag]["formatted_address_list"][3] + a_date
+    try:
+        print("Google3 {}".format(processed_tag_list[current_tag]["formatted_address_list"][3]))
+        lbl_google3["text"] = processed_tag_list[current_tag]["formatted_address_list"][3] + a_date
+    except KeyError:
+        lbl_google3["text"] = "" + a_date
+    except IndexError:
+        lbl_google3["text"] = "" + a_date
+
+
 
     return
 
