@@ -1,11 +1,13 @@
 import sys
+from tkinter import filedialog
+
 from tkinter import *
 from tkinter.ttk import Frame, Label
 from PIL import ImageTk, Image
 import jpgcollectinfo
 
 EXIF_DB_FILE = "D:\\temp\\kepek\\exif_db.db"
-DEFAULTPIC = "D:\\temp\\kepek\\default.jpg"
+DEFAULTDIR = "D:\\temp\\kepek\\"
 
 CANVAS_WIDTH = 500
 CANVAS_HIGHT = 500
@@ -14,11 +16,24 @@ current_tag=0
 processed_tag_list = ()
 
 def cb_file():
+    global abl1
     print("cb file")
+    #abl1.filename = filedialog.askopenfilename(initialdir = DEFAULTDIR,title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
+    abl1.filename = filedialog.askdirectory(initialdir=DEFAULTDIR, title="Select folder")
+    print (abl1.filename)
     return
+
+def cb_datafile():
+    global abl1
+    print("cb data file")
+    abl1.dbfilename = filedialog.askopenfilename(initialdir = abl1.filename,title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
+    print(abl1.dbfilename)
+    return
+
 
 def cb_scan():
     print("cb scan")
+
     return
 
 def cb_updatedb():
@@ -27,6 +42,8 @@ def cb_updatedb():
 
 def cb_save():
     print("cb save")
+    jpgcollectinfo.sort_tags_byexifdate(processed_tag_list)
+    jpgcollectinfo.save_list_to_file(processed_tag_list, EXIF_DB_FILE)
     return
 
 def cb_rename():
@@ -154,6 +171,7 @@ def main():
     global processed_tag_list
     global current_tag
     global can_maincanvas
+    global abl1
     global lbl_google0,lbl_google1,lbl_google2,lbl_google3
 
     currentrow = 0
@@ -172,7 +190,7 @@ def main():
     menubar = Menu(abl1)
     filemenu = Menu(menubar,tearoff = 0 )
     filemenu.add_command(label="Select folder ...", command=cb_file)
-    filemenu.add_command(label="Select db file...", command=cb_file)
+    filemenu.add_command(label="Select db file...", command=cb_datafile)
     filemenu.add_command(label="Save db ...", command=cb_save)
     filemenu.add_command(label="Quit", command=exit)
 

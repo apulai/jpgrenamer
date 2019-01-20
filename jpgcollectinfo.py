@@ -112,7 +112,7 @@ def distance(lat1,lon1,lat2,lon2):
 def printabledatatime(tag):
     return tag["EXIF DateTimeOriginal"].printable
 
-def sort_tags_byexifdata(taglist):
+def sort_tags_byexifdate(taglist):
     """
     Sort list of exif tags by EXIF attribute Original Date Time
     :param taglist:
@@ -328,7 +328,7 @@ if __name__ == "__main__":
     else:
         new_processed_list = processed_tag_list + smalllist
 
-    sort_tags_byexifdata(new_processed_list)
+    sort_tags_byexifdate(new_processed_list)
 
     save_list_to_file(new_processed_list, EXIF_DB_FILE)
 
