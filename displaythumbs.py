@@ -12,38 +12,45 @@ DEFAULTDIR = "D:\\temp\\kepek\\"
 CANVAS_WIDTH = 500
 CANVAS_HIGHT = 500
 
+# Horizontal SIZE of GRID
+GRID_HSIZE = 5
+
 # Google Geocoding API key
 GOOGLE_API_KEY = ""
-#GOOGLE_API_KEY_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\keyfile.txt"
+# GOOGLE_API_KEY_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\keyfile.txt"
 GOOGLE_API_KEY_FILE = "D:\\temp\\keyfile.txt"
 
-
-current_tag=0
+current_tag = 0
 processed_tag_list = ()
 
+
 def cb_file():
-    global abl1
+    global rootwindow
     global DEFAULTDIR
     print("cb file")
-    #abl1.filename = filedialog.askopenfilename(initialdir = DEFAULTDIR,title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
-    abl1.filename = filedialog.askdirectory(initialdir=DEFAULTDIR, title="Select folder")
-    print (abl1.filename)
-    DEFAULTDIR=abl1.filename
+    # rootwindow.filename = filedialog.askopenfilename(initialdir = DEFAULTDIR,title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
+    rootwindow.filename = filedialog.askdirectory(initialdir=DEFAULTDIR, title="Select folder")
+    print(rootwindow.filename)
+    DEFAULTDIR = rootwindow.filename
+    update_all_widgets()
     return
 
+
 def cb_datafile():
-    global abl1
+    global rootwindow
     global EXIF_DB_FILE
     print("cb data file")
-    abl1.dbfilename = filedialog.askopenfilename(initialdir = abl1.filename,title = "Select file",filetypes = (("EXIF db pickle","*.db"),("all files","*.*")))
+    rootwindow.dbfilename = filedialog.askopenfilename(initialdir=rootwindow.filename, title="Select file",
+                                                       filetypes=(("EXIF db pickle", "*.db"), ("all files", "*.*")))
 
-    if( abl1.dbfilename == ""):
-        EXIF_DB_FILE=DEFAULTDIR+"/"+"exif_db.db"
+    if (rootwindow.dbfilename == ""):
+        EXIF_DB_FILE = DEFAULTDIR + "/" + "exif_db.db"
 
     else:
-        EXIF_DB_FILE=abl1.dbfilename
+        EXIF_DB_FILE = rootwindow.dbfilename
 
     print(EXIF_DB_FILE)
+    update_all_widgets()
     return
 
 
@@ -95,9 +102,10 @@ def cb_scan():
     else:
         new_processed_list = processed_tag_list + smalllist
 
-    # quick sort by date
+    # Sort by date
     jpgcollectinfo.sort_tags_byexifdate(new_processed_list)
 
+    # We are working with globals, so we need to have the result in a global var
     processed_tag_list = new_processed_list
 
     scl_quicknavi["to"] = len(processed_tag_list)
@@ -105,9 +113,11 @@ def cb_scan():
     cb_start()
     return
 
+
 def cb_updatedb():
     print("cb updatedb")
     return
+
 
 def cb_save():
     print("cb save")
@@ -115,9 +125,11 @@ def cb_save():
     jpgcollectinfo.save_list_to_file(processed_tag_list, EXIF_DB_FILE)
     return
 
+
 def cb_rename():
     print("cb rename")
     return
+
 
 def cb_start():
     print("cb start")
@@ -125,17 +137,15 @@ def cb_start():
     global processed_tag_list
     global can_maincanvas
 
-
-
     current_tag = 0
     im = load_image(processed_tag_list[current_tag]["myfilename"])
     can_maincanvas.image = ImageTk.PhotoImage(im)
     can_maincanvas.create_image(0, 0, image=can_maincanvas.image, anchor="nw")
 
-    update_address_labels()
-
+    update_all_widgets()
 
     return
+
 
 def cb_left():
     global current_tag
@@ -143,12 +153,12 @@ def cb_left():
     global can_maincanvas
     print("cb left")
 
-    if (current_tag>0):
-        current_tag = current_tag -1
+    if (current_tag > 0):
+        current_tag = current_tag - 1
         im = load_image(processed_tag_list[current_tag]["myfilename"])
         can_maincanvas.image = ImageTk.PhotoImage(im)
         can_maincanvas.create_image(0, 0, image=can_maincanvas.image, anchor="nw")
-        update_address_labels()
+        update_all_widgets()
 
     return
 
@@ -158,12 +168,12 @@ def cb_right():
     global processed_tag_list
     print("cb right")
 
-    if len(processed_tag_list)-1 > current_tag:
+    if len(processed_tag_list) - 1 > current_tag:
         current_tag = current_tag + 1
         im = load_image(processed_tag_list[current_tag]["myfilename"])
         can_maincanvas.image = ImageTk.PhotoImage(im)
         can_maincanvas.create_image(0, 0, image=can_maincanvas.image, anchor="nw")
-        update_address_labels()
+        update_all_widgets()
     return
 
 
@@ -173,35 +183,46 @@ def cb_last():
     print("cb last")
 
     if len(processed_tag_list) != current_tag:
-        current_tag = len(processed_tag_list)-1
+        current_tag = len(processed_tag_list) - 1
         im = load_image(processed_tag_list[current_tag]["myfilename"])
         can_maincanvas.image = ImageTk.PhotoImage(im)
         can_maincanvas.create_image(0, 0, image=can_maincanvas.image, anchor="nw")
-        update_address_labels()
+        update_all_widgets()
     return
+
 
 def cb_quicknavi(position):
     global current_tag
-    current_tag = int(position)-1
+    current_tag = int(position) - 1
     cb_right()
     return
 
 
-def update_address_labels():
+def update_all_widgets():
     """
-    Will update all google labels
+    Will update all google labels, picture name, slider
     :return: nothing
     """
     global lbl_google0, lbl_google1, lbl_google2, lbl_google3, lbl_currentpicname
     global scl_quicknavi
 
-    a_date = "   "+ processed_tag_list[current_tag]["EXIF DateTimeOriginal"].printable[:10]
+    # Let's get the date of the picture
+    a_date = "   " + processed_tag_list[current_tag]["EXIF DateTimeOriginal"].printable[:10]
 
-    lbl_currentpicname["text"] = processed_tag_list[current_tag]["myfilename"] + "   " + str(current_tag) + " of " + str(len(processed_tag_list))
+    # Let's update the name of the picture
+    lbl_currentpicname["text"] = processed_tag_list[current_tag]["myfilename"] + "   " + str(
+        current_tag) + " of " + str(len(processed_tag_list))
 
+    # Let's update the setting labale
+    txt = "Source folder: " + DEFAULTDIR + "           Exif DB file: " + EXIF_DB_FILE
+    lbl_currentsettings["text"]=txt
 
+    # Let's move the quick_navi slider to the right location
+    # Maybe on a wrong place since can be moved with buttons
     scl_quicknavi.set(current_tag)
 
+    # Try to display the address
+    # Can get both Key and Index error
     try:
         print("Google0 {}".format(processed_tag_list[current_tag]["formatted_address_list"][0]))
         lbl_google0["text"] = processed_tag_list[current_tag]["formatted_address_list"][0] + a_date
@@ -234,9 +255,8 @@ def update_address_labels():
     except IndexError:
         lbl_google3["text"] = "" + a_date
 
-
-
     return
+
 
 def load_image(filename):
     """
@@ -246,24 +266,23 @@ def load_image(filename):
     :return: PIL image
     """
     try:
-        fp = open(filename,"rb")
-        im = Image.open(fp,"r")
+        fp = open(filename, "rb")
+        im = Image.open(fp, "r")
         w = im.width
         h = im.height
         r1 = w / CANVAS_WIDTH
         r2 = h / CANVAS_HIGHT
 
-
-        if( r1 > r2):
-            if( r1 > 1 ):
-                w = w * (1/r1)
-                h = h * (1/r1)
+        if (r1 > r2):
+            if (r1 > 1):
+                w = w * (1 / r1)
+                h = h * (1 / r1)
         else:
-            if( r2 > 1):
+            if (r2 > 1):
                 w = w * (1 / r2)
                 h = h * (1 / r2)
 
-        size = int(w),int(h)
+        size = int(w), int(h)
         print(size)
         im.thumbnail(size)
         return im
@@ -271,13 +290,12 @@ def load_image(filename):
         print("cannot create thumbnail for", filename)
 
 
-
 def main():
     global processed_tag_list
     global current_tag
     global can_maincanvas
-    global abl1
-    global lbl_google0,lbl_google1,lbl_google2,lbl_google3
+    global rootwindow
+    global lbl_google0, lbl_google1, lbl_google2, lbl_google3, lbl_currentsettings
     global lbl_currentpicname
     global scl_quicknavi
 
@@ -286,31 +304,32 @@ def main():
     processed_tag_list = jpgcollectinfo.read_list_from_file(EXIF_DB_FILE)
 
     # Is list OK, or is empty? Quit if empty
-    if(len(processed_tag_list) < 1):
+    if (len(processed_tag_list) < 1):
         exit(1)
 
     print(processed_tag_list[current_tag]["myfilename"])
 
-    abl1 = Tk()
+    rootwindow = Tk()
 
     # Creating first row of UI
-    menubar = Menu(abl1)
-    filemenu = Menu(menubar,tearoff = 0 )
+    # This will be the menubar
+    menubar = Menu(rootwindow)
+    filemenu = Menu(menubar, tearoff=0)
     filemenu.add_command(label="Select folder ...", command=cb_file)
     filemenu.add_command(label="Select db file...", command=cb_datafile)
     filemenu.add_command(label="Save db ...", command=cb_save)
     filemenu.add_command(label="Quit", command=exit)
 
-    menubar.add_cascade(label = "File", menu = filemenu)
-    menubar.add_cascade(label = "Scan folder", command=cb_scan)
-    menubar.add_cascade(label = "Rename source files", command=cb_rename)
+    menubar.add_cascade(label="File", menu=filemenu)
+    menubar.add_cascade(label="Scan folder", command=cb_scan)
+    menubar.add_cascade(label="Rename source files", command=cb_rename)
     menubar.add_cascade(label="Help")
 
-    abl1.config(menu=menubar)
+    rootwindow.config(menu=menubar)
 
     # Creating next row of UI
     # This is a frame and a canvas in the frame
-    frame_main = Frame(abl1)
+    frame_main = Frame(rootwindow)
 
     filename = processed_tag_list[current_tag]["myfilename"]
     im = load_image(filename)
@@ -319,78 +338,87 @@ def main():
     can_maincanvas.image = ImageTk.PhotoImage(im)
     can_maincanvas.create_image(0, 0, image=can_maincanvas.image, anchor="nw")
 
-    frame_main.grid(row =currentrow, column = 0 , rowspan = 5, columnspan = 5, padx =10, pady =5)
-    can_maincanvas.grid(row =0, column = 0 , rowspan = 1, columnspan = 1, padx =10, pady =5 )
-    currentrow=currentrow+5
+    frame_main.grid(row=currentrow, column=0, rowspan=5, columnspan=GRID_HSIZE, padx=5, pady=5)
+    can_maincanvas.grid(row=0, column=0, rowspan=1, columnspan=GRID_HSIZE, padx=5, pady=5)
+    currentrow = currentrow + 5
 
     # Creating next row of UI
     # slider for quick navi
-    scl_quicknavi = Scale(abl1, orient=HORIZONTAL, length=300, to=len(processed_tag_list), command = cb_quicknavi)
-    scl_quicknavi.set(current_tag)
-    scl_quicknavi.grid(row=currentrow, column=1, columnspan=5)
-    currentrow = currentrow + 1
-
-    # Creating next row of UI
     # next and previous buttons
-    btn_start = Button(abl1, text="|<", command=cb_start)
-    btn_left  = Button(abl1, text="<<", command=cb_left)
-    btn_right = Button(abl1, text=">>", command=cb_right)
-    btn_last = Button(abl1, text=">|", command=cb_last)
-    btn_start.grid(row=currentrow, column=0)
-    btn_left.grid (row=currentrow, column=1)
-    btn_right.grid(row=currentrow, column=2)
-    btn_last.grid (row=currentrow, column=3)
+    frame_navi = Frame(rootwindow)
+    btn_start = Button(frame_navi, text="|<", command=cb_start, anchor="e")
+    btn_left = Button(frame_navi, text="<<", command=cb_left, anchor="e")
+
+    scl_quicknavi = Scale(frame_navi, orient=HORIZONTAL, length=300, to=len(processed_tag_list), command=cb_quicknavi)
+    scl_quicknavi.set(current_tag)
+
+    btn_right = Button(frame_navi, text=">>", command=cb_right, anchor="w")
+    btn_last = Button(frame_navi, text=">|", command=cb_last, anchor="w")
+
+    btn_start.grid(row=0, column=0)
+    btn_left.grid(row=0, column=1)
+    scl_quicknavi.grid(row=0, column=2)
+    btn_right.grid(row=0, column=3)
+    btn_last.grid(row=0, column=4)
+    frame_navi.grid(row=currentrow, column=0, columnspan=GRID_HSIZE, padx=5, pady=5)
     currentrow = currentrow + 1
 
     # Creating next row of UI
     # which picture we are looking at
-    lbl_currentpicname = Label (abl1, text = "currentpicname")
-    lbl_currentpicname.grid(row=currentrow, column=0,columnspan=5)
+    lbl_currentpicname = Label(rootwindow, text="currentpicname")
+    lbl_currentpicname.grid(row=currentrow, column=0, columnspan=GRID_HSIZE)
     currentrow = currentrow + 1
 
+
+
     # Creating next row of UI
-    lbl_a = Label( abl1, text = " A ")
-    lbl_a.grid( row = currentrow, column = 0)
-    scl_withintime = Scale( abl1, orient=HORIZONTAL, length = 300, to=300 )
+    # slider for how many to pics display at once
+    lbl_a = Label(rootwindow, text=" A ")
+    lbl_a.grid(row=currentrow, column=0)
+    scl_withintime = Scale(rootwindow, orient=HORIZONTAL, length=300, to=300)
     scl_withintime.set(15)
-    scl_withintime.grid( row = currentrow, column = 1, columnspan = 3)
-    lbl_numberofpic = Label (abl1, text = " percen belül készült képek száma  xxxx db")
-    lbl_numberofpic.grid( row = currentrow, column = 4)
+    scl_withintime.grid(row=currentrow, column=1, columnspan=1)
+    lbl_numberofpic = Label(rootwindow, text=" percen belül készült képek száma  xxxx db")
+    lbl_numberofpic.grid(row=currentrow, column=2)
     currentrow = currentrow + 1
 
     # Creating next row of UI
-    lbl_renameto =     Label (abl1, text = "Rename to")
-    lbl_renameto.grid( row =currentrow, column = 0 )
-    entry_renameto =   Entry (abl1, text = "default rename to", width = 100)
-    entry_renameto.grid( row = currentrow, column = 1, columnspan = 3 )
+    lbl_renameto = Label(rootwindow, text="Rename to")
+    lbl_renameto.grid(row=currentrow, column=0)
+    entry_renameto = Entry(rootwindow, text="default rename to", width=100)
+    entry_renameto.grid(row=currentrow, column=1, columnspan=GRID_HSIZE - 1)
     currentrow = currentrow + 1
 
     # Creating next row of UI
-    lbl_google0 = Label (abl1, text = "Google0")
-    lbl_google0.grid(row=currentrow, columnspan = 5)
+    lbl_google0 = Label(rootwindow, text="Google0")
+    lbl_google0.grid(row=currentrow, columnspan=GRID_HSIZE)
     currentrow = currentrow + 1
 
     # Creating next row of UI
-    lbl_google1 = Label(abl1, text="Google1")
-    lbl_google1.grid(row=currentrow, columnspan = 5)
+    lbl_google1 = Label(rootwindow, text="Google1")
+    lbl_google1.grid(row=currentrow, columnspan=GRID_HSIZE)
     currentrow = currentrow + 1
 
     # Creating next row of UI
-    lbl_google2 = Label(abl1, text="Google2")
-    lbl_google2.grid(row=currentrow, columnspan = 5)
+    lbl_google2 = Label(rootwindow, text="Google2")
+    lbl_google2.grid(row=currentrow, columnspan=GRID_HSIZE)
     currentrow = currentrow + 1
 
     # Creating next row of UI
-    lbl_google3 = Label(abl1, text="Google3")
-    lbl_google3.grid(row=currentrow, columnspan = 5)
+    lbl_google3 = Label(rootwindow, text="Google3")
+    lbl_google3.grid(row=currentrow, columnspan=GRID_HSIZE)
+    currentrow = currentrow + 1
+
+    # Creating next row of UI
+    # Name of working folder and DB
+    txt = "Source folder: " + DEFAULTDIR + "       Exif DB file: " + EXIF_DB_FILE
+    lbl_currentsettings = Label(rootwindow, text=txt)
+    lbl_currentsettings.grid(row=currentrow, column=0, columnspan=GRID_HSIZE)
     currentrow = currentrow + 1
 
     cb_start()
 
-    abl1.mainloop()
-
-
-
+    rootwindow.mainloop()
 
 
 if __name__ == '__main__':
