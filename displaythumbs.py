@@ -231,6 +231,7 @@ def update_all_widgets():
     except IndexError:
         lbl_google0["text"] = "" + a_date
 
+
     try:
         print("Google1 {}".format(processed_tag_list[current_tag]["formatted_address_list"][1]))
         lbl_google1["text"] = processed_tag_list[current_tag]["formatted_address_list"][1] + a_date
