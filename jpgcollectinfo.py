@@ -111,7 +111,10 @@ def distance(lat1,lon1,lat2,lon2):
     return( distance )
 
 def printabledatatime(tag):
-    return tag["EXIF DateTimeOriginal"].printable
+    try:
+        return tag["EXIF DateTimeOriginal"].printable
+    except KeyError:
+        return "1970:01:01"
 
 def sort_tags_byexifdate(taglist):
     """

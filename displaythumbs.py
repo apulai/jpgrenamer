@@ -1,6 +1,6 @@
 import sys
 from tkinter import filedialog
-
+from tkinter import messagebox
 from tkinter import *
 from tkinter.ttk import Frame, Label
 from PIL import ImageTk, Image
@@ -33,6 +33,9 @@ def cb_file():
     print(rootwindow.filename)
     DEFAULTDIR = rootwindow.filename
     update_all_widgets()
+
+    messagebox.showinfo("Information","Go and select a DB file then scan")
+
     return
 
 
@@ -51,6 +54,9 @@ def cb_datafile():
 
     print(EXIF_DB_FILE)
     update_all_widgets()
+
+    messagebox.showinfo("Information", "Check settings below and run scan...")
+
     return
 
 
@@ -200,14 +206,17 @@ def cb_quicknavi(position):
 
 def update_all_widgets():
     """
-    Will update all google labels, picture name, slider
+    Will update all google labels, picture name, slider, settings info
     :return: nothing
     """
     global lbl_google0, lbl_google1, lbl_google2, lbl_google3, lbl_currentpicname
     global scl_quicknavi
 
     # Let's get the date of the picture
-    a_date = "   " + processed_tag_list[current_tag]["EXIF DateTimeOriginal"].printable[:10]
+    try:
+        a_date = "   " + processed_tag_list[current_tag]["EXIF DateTimeOriginal"].printable[:10]
+    except KeyError:
+        a_date = "1970:01:01 01:01:01"
 
     # Let's update the name of the picture
     lbl_currentpicname["text"] = processed_tag_list[current_tag]["myfilename"] + "   " + str(
@@ -418,6 +427,8 @@ def main():
     currentrow = currentrow + 1
 
     cb_start()
+
+    messagebox.showinfo("Information", "You can select a different working directory. \n Select a DB file. \n Run Scan ")
 
     rootwindow.mainloop()
 
