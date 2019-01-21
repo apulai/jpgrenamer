@@ -51,6 +51,7 @@ def cb_scan():
     print("cb scan")
     global GOOGLE_API_KEY
     global processed_tag_list
+    global scl_quicknavi
 
     GOOGLE_API_KEY = jpgcollectinfo.read_api_key_from_file()
 
@@ -99,6 +100,7 @@ def cb_scan():
 
     processed_tag_list = new_processed_list
 
+    scl_quicknavi["to"] = len(processed_tag_list)
     # Display the first pic
     cb_start()
     return
@@ -122,6 +124,7 @@ def cb_start():
     global current_tag
     global processed_tag_list
     global can_maincanvas
+
 
 
     current_tag = 0
@@ -177,14 +180,27 @@ def cb_last():
         update_address_labels()
     return
 
+def cb_quicknavi(position):
+    global current_tag
+    current_tag = int(position)-1
+    cb_right()
+    return
+
+
 def update_address_labels():
     """
     Will update all google labels
     :return: nothing
     """
-    global lbl_google0, lbl_google1, lbl_google2, lbl_google3
+    global lbl_google0, lbl_google1, lbl_google2, lbl_google3, lbl_currentpicname
+    global scl_quicknavi
 
     a_date = "   "+ processed_tag_list[current_tag]["EXIF DateTimeOriginal"].printable[:10]
+
+    lbl_currentpicname["text"] = processed_tag_list[current_tag]["myfilename"] + "   " + str(current_tag) + " of " + str(len(processed_tag_list))
+
+
+    scl_quicknavi.set(current_tag)
 
     try:
         print("Google0 {}".format(processed_tag_list[current_tag]["formatted_address_list"][0]))
@@ -262,6 +278,8 @@ def main():
     global can_maincanvas
     global abl1
     global lbl_google0,lbl_google1,lbl_google2,lbl_google3
+    global lbl_currentpicname
+    global scl_quicknavi
 
     currentrow = 0
 
@@ -289,21 +307,6 @@ def main():
     menubar.add_cascade(label="Help")
 
     abl1.config(menu=menubar)
-    #menubar.gird( row=currentrow, column =0, sticky = W, columnspan = 5 )
-    #currentrow = currentrow + 1
-
-    #btn_file = Button(abl1, text="File", command=cb_file)
-    #btn_scan = Button(abl1, text="Scan", command=cb_scan)
-    #btn_update = Button(abl1, text="Update Metadata DB", command=cb_updatedb)
-    #btn_save = Button(abl1,text="Save Metadata DB", command=cb_save)
-    #btn_rename = Button(abl1,text="Rename file", command=cb_rename)
-    #btn_file.grid   ( row=currentrow, column =0, sticky = W)
-    #btn_scan.grid   ( row=currentrow, column =1, sticky = W)
-    #btn_update.grid ( row=currentrow, column =2, sticky = W)
-    #btn_save.grid   ( row=currentrow, column =3, sticky = W)
-    #btn_rename.grid ( row=currentrow, column =4, sticky = W)
-    #currentrow = currentrow + 1
-
 
     # Creating next row of UI
     # This is a frame and a canvas in the frame
@@ -321,6 +324,13 @@ def main():
     currentrow=currentrow+5
 
     # Creating next row of UI
+    # slider for quick navi
+    scl_quicknavi = Scale(abl1, orient=HORIZONTAL, length=300, to=len(processed_tag_list), command = cb_quicknavi)
+    scl_quicknavi.set(current_tag)
+    scl_quicknavi.grid(row=currentrow, column=1, columnspan=5)
+    currentrow = currentrow + 1
+
+    # Creating next row of UI
     # next and previous buttons
     btn_start = Button(abl1, text="|<", command=cb_start)
     btn_left  = Button(abl1, text="<<", command=cb_left)
@@ -332,6 +342,11 @@ def main():
     btn_last.grid (row=currentrow, column=3)
     currentrow = currentrow + 1
 
+    # Creating next row of UI
+    # which picture we are looking at
+    lbl_currentpicname = Label (abl1, text = "currentpicname")
+    lbl_currentpicname.grid(row=currentrow, column=0,columnspan=5)
+    currentrow = currentrow + 1
 
     # Creating next row of UI
     lbl_a = Label( abl1, text = " A ")
