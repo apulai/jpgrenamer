@@ -3,6 +3,9 @@ import exifread
 import googlemaps
 import re
 import pickle
+import time
+from datetime import date
+import datetime
 import json
 
 
@@ -114,7 +117,7 @@ def printabledatatime(tag):
     try:
         return tag["EXIF DateTimeOriginal"].printable
     except KeyError:
-        return "1970:01:01"
+        return "1970:01:01 01:01:01"
 
 def sort_tags_byexifdate(taglist):
     """
@@ -125,7 +128,28 @@ def sort_tags_byexifdate(taglist):
     taglist.sort(key=printabledatatime)
     return
 
+def timedifference(tag1,tag2):
+    """
+    Return the timedelta of 2 tags
+    :param tag1:
+    :param tag2:
+    :return: a timedelta object
 
+    """
+    a_date1 = printabledatatime(tag1)
+    a_date2 = printabledatatime(tag2)
+
+    a_date1 = re.sub(" ",":", a_date1)
+    a_date2 = re.sub(" ",":", a_date2)
+    l_date1 = re.split(":", a_date1)
+    l_date2 = re.split(":", a_date2)
+
+    date1 = datetime.datetime(int(l_date1[0]),int(l_date1[1]),int(l_date1[2]),int(l_date1[3]),int(l_date1[4]),int(l_date1[5]))
+    date2 = datetime.datetime(int(l_date2[0]),int(l_date2[1]),int(l_date2[2]),int(l_date2[3]),int(l_date2[4]),int(l_date2[5]))
+    timedelta = date1 - date2
+
+    #return timedelta.total_seconds()
+    return timedelta
 
 def gettags(filelist):
     """input: list of files
@@ -176,7 +200,7 @@ def filtertags(taglist):
                 d[ key ] = item[key]
             # Collect all GPS related tags
             if "GPS" in key:
-                d[ key] = item[key]
+                d[ key ] = item[key]
         smalllist.append(d)
 
     return smalllist
@@ -203,10 +227,20 @@ def findjpg(folder):
 
 
 def propose_name(item):
-    date = item["EXIF DateTimeOriginal"].printable[:10]
-    # Remove : from date
-    date = re.sub(":","",date)
-    # I think level 2 address was ok
+    """
+    Should propose a nice name
+    Not working yet
+    :param item: item from the taglist
+    :return: a nice name, currently date_formattedaddress
+    """
+    try:
+        date = item["EXIF DateTimeOriginal"].printable[:10]
+        # Remove : from date
+        date = re.sub(":","",date)
+        # I think level 2 address was ok
+    except KeyError:
+        date = "19700101"
+
     try:
         address=item["formatted_address_list"][2]
     except KeyError:
@@ -360,8 +394,18 @@ if __name__ == "__main__":
     # the database
     save_list_to_file(new_processed_list, EXIF_DB_FILE)
 
+    #
+    # Test for computing time delta
+    #
+    tag0 = new_processed_list[1]
+    for tag in new_processed_list:
+        delta=timedifference(tag0,tag)
+        print(" Difference is {}(s)".format(delta))
 
-
+    exit(0)
     printtags(new_processed_list)
 
+    #
+    # Test for computing distance of 2 coordintates delta
+    #
     print("Distance: {} km".format(distance(-33.84266944444445,151.17260833333333,47.63259166666667,19.142563888888887)))

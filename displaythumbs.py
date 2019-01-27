@@ -4,6 +4,7 @@ from tkinter import messagebox
 from tkinter import *
 from tkinter.ttk import Frame, Label
 from PIL import ImageTk, Image
+import datetime
 import jpgcollectinfo
 
 EXIF_DB_FILE = "D:\\temp\\kepek\\exif_db.db"
@@ -203,13 +204,60 @@ def cb_quicknavi(position):
     cb_right()
     return
 
+def cb_btn_google0():
+    global btn_google0, entry_renameto
+    entry_renameto.delete(0,END)
+    entry_renameto.insert(0,btn_google0["text"])
+    return
+
+def cb_btn_google1():
+    global btn_google1, entry_renameto
+    entry_renameto.delete(0, END)
+    entry_renameto.insert(0, btn_google1["text"])
+    return
+
+def cb_btn_google2():
+    global btn_google2, entry_renameto
+    entry_renameto.delete(0, END)
+    entry_renameto.insert(0, btn_google2["text"])
+    return
+
+def cb_btn_google3():
+    global btn_google3, entry_renameto
+    entry_renameto.delete(0, END)
+    entry_renameto.insert(0, btn_google3["text"])
+    return
+
+def cb_scale_withintime(position):
+    update_all_widgets()
+
+def number_of_pics_in_range():
+    """
+    Will return the number of pictures
+    from currently showing pic
+    to the value of
+    :return:
+    """
+    global scl_withintime
+    count = 0
+    maxdelta = int(scl_withintime.get())
+    maxdelta = datetime.timedelta(minutes=maxdelta)
+    for tag in processed_tag_list[current_tag:]:
+        delta = jpgcollectinfo.timedifference(tag, processed_tag_list[current_tag])
+        #print(delta, maxdelta)
+        if( delta < maxdelta ):
+            count = count + 1
+        if( delta > maxdelta):
+            break
+    return count
 
 def update_all_widgets():
     """
     Will update all google labels, picture name, slider, settings info
     :return: nothing
     """
-    global lbl_google0, lbl_google1, lbl_google2, lbl_google3, lbl_currentpicname
+    global btn_google0, btn_google1, btn_google2, btn_google3
+    global lbl_currentpicname, lbl_numberofpic
     global scl_quicknavi
 
     # Let's get the date of the picture
@@ -217,6 +265,9 @@ def update_all_widgets():
         a_date = "   " + processed_tag_list[current_tag]["EXIF DateTimeOriginal"].printable[:10]
     except KeyError:
         a_date = "1970:01:01 01:01:01"
+
+    a_date2 = re.sub(":", "", a_date)
+    a_date2 = a_date2+"_"
 
     # Let's update the name of the picture
     lbl_currentpicname["text"] = processed_tag_list[current_tag]["myfilename"] + "   " + str(
@@ -230,40 +281,45 @@ def update_all_widgets():
     # Maybe on a wrong place since can be moved with buttons
     scl_quicknavi.set(current_tag)
 
+    #
+    # Calculate the number of pic within range
+    #
+    lbl_numberofpic["text"] = " percen belül készült képek száma " + str(number_of_pics_in_range()) + " db"
+
     # Try to display the address
     # Can get both Key and Index error
     try:
         print("Google0 {}".format(processed_tag_list[current_tag]["formatted_address_list"][0]))
-        lbl_google0["text"] = processed_tag_list[current_tag]["formatted_address_list"][0] + a_date
+        btn_google0["text"] = a_date2 + processed_tag_list[current_tag]["formatted_address_list"][0]
     except KeyError:
-        lbl_google0["text"] = "" + a_date
+        btn_google0["text"] = a_date2 + ""
     except IndexError:
-        lbl_google0["text"] = "" + a_date
+        btn_google0["text"] = a_date2 + ""
 
 
     try:
         print("Google1 {}".format(processed_tag_list[current_tag]["formatted_address_list"][1]))
-        lbl_google1["text"] = processed_tag_list[current_tag]["formatted_address_list"][1] + a_date
+        btn_google1["text"] = a_date2 + processed_tag_list[current_tag]["formatted_address_list"][1]
     except KeyError:
-        lbl_google1["text"] = "" + a_date
+        btn_google1["text"] = a_date2 + ""
     except IndexError:
-        lbl_google1["text"] = "" + a_date
+        btn_google1["text"] = a_date2 + ""
 
     try:
         print("Google2 {}".format(processed_tag_list[current_tag]["formatted_address_list"][2]))
-        lbl_google2["text"] = processed_tag_list[current_tag]["formatted_address_list"][2] + a_date
+        btn_google2["text"] = a_date2 + processed_tag_list[current_tag]["formatted_address_list"][2]
     except KeyError:
-        lbl_google2["text"] = "" + a_date
+        btn_google2["text"] = a_date2 + ""
     except IndexError:
-        lbl_google2["text"] = "" + a_date
+        btn_google2["text"] = a_date2 + ""
 
     try:
         print("Google3 {}".format(processed_tag_list[current_tag]["formatted_address_list"][3]))
-        lbl_google3["text"] = processed_tag_list[current_tag]["formatted_address_list"][3] + a_date
+        btn_google3["text"] = a_date2 + processed_tag_list[current_tag]["formatted_address_list"][3]
     except KeyError:
-        lbl_google3["text"] = "" + a_date
+        btn_google3["text"] = a_date2 + ""
     except IndexError:
-        lbl_google3["text"] = "" + a_date
+        btn_google3["text"] = a_date2 + ""
 
     return
 
@@ -305,9 +361,10 @@ def main():
     global current_tag
     global can_maincanvas
     global rootwindow
-    global lbl_google0, lbl_google1, lbl_google2, lbl_google3, lbl_currentsettings
-    global lbl_currentpicname
-    global scl_quicknavi
+    global btn_google0, btn_google1, btn_google2, btn_google3
+    global lbl_currentpicname, lbl_renameto, lbl_currentsettings, lbl_numberofpic
+    global entry_renameto
+    global scl_quicknavi, scl_withintime
 
     currentrow = 0
 
@@ -385,7 +442,7 @@ def main():
     # slider for how many to pics display at once
     lbl_a = Label(rootwindow, text=" A ")
     lbl_a.grid(row=currentrow, column=0)
-    scl_withintime = Scale(rootwindow, orient=HORIZONTAL, length=300, to=300)
+    scl_withintime = Scale(rootwindow, orient=HORIZONTAL, length=300, to=300, command=cb_scale_withintime)
     scl_withintime.set(15)
     scl_withintime.grid(row=currentrow, column=1, columnspan=1)
     lbl_numberofpic = Label(rootwindow, text=" percen belül készült képek száma  xxxx db")
@@ -400,23 +457,23 @@ def main():
     currentrow = currentrow + 1
 
     # Creating next row of UI
-    lbl_google0 = Label(rootwindow, text="Google0")
-    lbl_google0.grid(row=currentrow, columnspan=GRID_HSIZE)
+    btn_google0 = Button(rootwindow, text="Google0", command=cb_btn_google0)
+    btn_google0.grid(row=currentrow, columnspan=GRID_HSIZE)
     currentrow = currentrow + 1
 
     # Creating next row of UI
-    lbl_google1 = Label(rootwindow, text="Google1")
-    lbl_google1.grid(row=currentrow, columnspan=GRID_HSIZE)
+    btn_google1 = Button(rootwindow, text="Google1", command=cb_btn_google1)
+    btn_google1.grid(row=currentrow, columnspan=GRID_HSIZE)
     currentrow = currentrow + 1
 
     # Creating next row of UI
-    lbl_google2 = Label(rootwindow, text="Google2")
-    lbl_google2.grid(row=currentrow, columnspan=GRID_HSIZE)
+    btn_google2 = Button(rootwindow, text="Google2", command=cb_btn_google2)
+    btn_google2.grid(row=currentrow, columnspan=GRID_HSIZE)
     currentrow = currentrow + 1
 
     # Creating next row of UI
-    lbl_google3 = Label(rootwindow, text="Google3")
-    lbl_google3.grid(row=currentrow, columnspan=GRID_HSIZE)
+    btn_google3 = Button(rootwindow, text="Google3", command=cb_btn_google3)
+    btn_google3.grid(row=currentrow, columnspan=GRID_HSIZE)
     currentrow = currentrow + 1
 
     # Creating next row of UI
