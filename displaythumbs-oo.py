@@ -25,19 +25,18 @@ GOOGLE_RECOMMENDATIONS = 4
 # TODO: hunglish interface doesn't look good
 
 
-class MyClass:
+class RenameUI:
     def __init__(self, canvas_width, canvas_height, canvas_bg_colour, grid_hsize, num_recommendations, dir, db_file):
         self.root_window = Tk()
         self.dir = dir
         self.db_file = db_file
         self.current_row = 0
-        self.processed_tag_list = jpgcollectinfo.read_list_from_file(EXIF_DB_FILE)
+        self.processed_tag_list = jpgcollectinfo.read_list_from_file(db_file)
 
         self.current_tag = 0
         # self.create_widgets()
         self.menu_bar = Menu()
         self.file_menu = Menu(self.menu_bar, tearoff=0)
-        # TODO: figure out below lines
         self.filename = self.processed_tag_list[self.current_tag]["myfilename"]
         self.im = load_image(self.filename)
         self.main_frame = Frame()
@@ -45,16 +44,16 @@ class MyClass:
         self.grid_hsize = grid_hsize
         self.create_canvas()
         self.navi_frame = Frame()
-        self.scl_quicknavi = Scale(self.navi_frame, orient=HORIZONTAL, length=300, to=len(self.processed_tag_list),
-                                   command=self.cb_quicknavi)
+        self.scl_quicknavi = Scale(self.navi_frame, orient=HORIZONTAL, length=300,
+                                   from_=1, to=len(self.processed_tag_list), command=self.cb_quicknavi)
         self.lbl_currentpicname = Label(self.root_window, text="currentpicname")
         self.scl_withintime = Scale(self.root_window, orient=HORIZONTAL, length=300, to=300,
                                     command=self.cb_scale_withintime)
         self.lbl_numberofpic = Label(self.root_window, text=" percen belül készült képek száma  xxxx db")
         self.entry_renameto = Entry(self.root_window, text="default rename to", width=100)
         self.google_buttons = []
-        txt = "Source folder: " + DEFAULTDIR + "       Exif DB file: " + EXIF_DB_FILE
-        self.lbl_current_settings = Label(self.root_window, text=txt)
+        self.lbl_current_settings = Label(self.root_window,
+                                          text="Source folder: {}       Exif DB file: {}".format(dir, db_file))
         self.create_widgets(num_recommendations)
 
     def create_widgets(self, num_recommendations):
@@ -127,6 +126,9 @@ class MyClass:
         lbl_renameto = Label(self.root_window, text="Rename to")
         lbl_renameto.grid(row=self.current_row, column=0)
         self.entry_renameto.grid(row=self.current_row, column=1, columnspan=self.grid_hsize-1)
+
+        btn_ok = Button(self.root_window, text=" OK ", command=self.cb_rename)
+        btn_ok.grid(row=self.current_row, column=4)
         self.current_row += 1
 
     def create_google_buttons(self, num_recommendations):
@@ -152,7 +154,6 @@ class MyClass:
 
     def cb_scale_withintime(self, position):
         self.update_all_widgets()
-        # TODO: complete this
 
     def update_all_widgets(self):
         """
@@ -162,23 +163,23 @@ class MyClass:
 
         # Let's get the date of the picture
         try:
-            a_date = "   " + self.processed_tag_list[self.current_tag]["EXIF DateTimeOriginal"].printable[:10]
+            a_date = "  " + self.processed_tag_list[self.current_tag]["EXIF DateTimeOriginal"].printable[:10]
         except KeyError:
             a_date = "1970:01:01 01:01:01"
 
         a_date2 = re.sub(":", "", a_date)
-        a_date2 = a_date2+"_"
+        a_date2 = a_date2 + "_"
 
         # Let's update the name of the picture
-        self.lbl_currentpicname["text"] = self.processed_tag_list[self.current_tag]["myfilename"] + "   " + str(
-            self.current_tag) + " of " + str(len(self.processed_tag_list))
+        self.lbl_currentpicname["text"] = self.processed_tag_list[self.current_tag]["myfilename"] + "   " \
+                                          + str(self.current_tag+1) + " of " + str(len(self.processed_tag_list))
 
         # Let's update the bottom info area
-        self.lbl_current_settings["text"] = "Source folder: " + DEFAULTDIR + "           Exif DB file: " + EXIF_DB_FILE
+        self.lbl_current_settings["text"] = "Source folder: " + self.dir + "           Exif DB file: " + self.db_file
 
         # Let's move the quick_navi slider to the right location
         # Maybe on a wrong place since can be moved with buttons
-        self.scl_quicknavi.set(self.current_tag)
+        self.scl_quicknavi.set(self.current_tag+1)
 
         #
         # Calculate the number of pic within range
@@ -204,14 +205,24 @@ class MyClass:
         """
         count = 0
         max_delta = int(self.scl_withintime.get())
-        max_delta = datetime.timedelta(minutes=max_delta)
+
+        max_delta = datetime.timedelta(minutes=max_delta).total_seconds()
         for tag in self.processed_tag_list[self.current_tag:]:
             delta = jpgcollectinfo.timedifference(tag, self.processed_tag_list[self.current_tag])
-            # print(delta, max_delta)
-            if delta < max_delta:
+            if abs(delta.total_seconds()) < max_delta:
                 count = count + 1
-            if delta > max_delta:
-                break
+
+# TODO: APULAI, I don't think your implementation works reliably, check proposed mod above
+# TODO: Also should it return 0 or 1 if we found only 1 picture (itself)???
+# TODO: And why don't you consider pictures before the current one?
+#        max_delta = datetime.timedelta(minutes=max_delta)
+#        for tag in self.processed_tag_list[self.current_tag:]:
+#            delta = jpgcollectinfo.timedifference(tag, self.processed_tag_list[self.current_tag])
+#            # print(delta, max_delta)
+#            if delta < max_delta:
+#                count = count + 1
+#            if delta > max_delta:
+#                break
         return count
 
     def cb_file(self):
@@ -299,7 +310,7 @@ class MyClass:
     def cb_save(self):
         print("cb save")
         jpgcollectinfo.sort_tags_byexifdate(self.processed_tag_list)
-        jpgcollectinfo.save_list_to_file(self.processed_tag_list, EXIF_DB_FILE)
+        jpgcollectinfo.save_list_to_file(self.processed_tag_list, self.db_file)
 
     def cb_rename(self):
         print("cb rename")
@@ -334,7 +345,11 @@ class MyClass:
 
     def cb_quicknavi(self, position):
         self.current_tag = int(position) - 1
-        self.cb_right()
+        self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
+        self.main_canvas.image = ImageTk.PhotoImage(self.im)
+        self.main_canvas.create_image(0, 0, image=self.main_canvas.image, anchor="nw")
+        self.update_all_widgets()
+        # self.cb_right()
 
     def cb_btn_google(self, button):
         self.entry_renameto.delete(0, END)
@@ -348,6 +363,7 @@ def load_image(filename):
     :param filename: name of the file to load
     :return: PIL image
     """
+    # TODO: APULAI to move this into the class
     try:
         fp = open(filename, "rb")
         im = Image.open(fp, "r")
@@ -375,7 +391,7 @@ def load_image(filename):
 
 
 def main():
-    c = MyClass(CANVAS_WIDTH, CANVAS_HEIGHT, CANVAS_BG_COLOUR, GRID_HSIZE, GOOGLE_RECOMMENDATIONS, DEFAULTDIR,
+    c = RenameUI(CANVAS_WIDTH, CANVAS_HEIGHT, CANVAS_BG_COLOUR, GRID_HSIZE, GOOGLE_RECOMMENDATIONS, DEFAULTDIR,
                 EXIF_DB_FILE)
     if len(c.processed_tag_list) < 1:
         exit(1)
