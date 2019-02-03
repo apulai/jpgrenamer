@@ -18,7 +18,7 @@ GRID_HSIZE = 5
 
 # Google Geocoding API key
 GOOGLE_API_KEY = ""
-# GOOGLE_API_KEY_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\keyfile.txt"
+# google_api_key_file = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\keyfile.txt"
 GOOGLE_API_KEY_FILE = "D:\\temp\\keyfile.txt"
 
 current_tag = 0

@@ -8,9 +8,11 @@ import datetime
 import jpgcollectinfo
 from functools import partial
 
+EXIF_DB_FILE = "D:\\temp\\kepek\\exif_db.db"
+DEFAULTDIR = "D:\\temp\\kepek\\"
 
-EXIF_DB_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\exif_db.db"
-DEFAULTDIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek\\"
+#EXIF_DB_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\exif_db.db"
+#DEFAULTDIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek\\"
 
 CANVAS_WIDTH = 500
 CANVAS_HEIGHT = 500
@@ -55,6 +57,8 @@ class RenameUI:
         self.lbl_current_settings = Label(self.root_window,
                                           text="Source folder: {}       Exif DB file: {}".format(dir, db_file))
         self.create_widgets(num_recommendations)
+
+
 
     def create_widgets(self, num_recommendations):
         self.create_menu()

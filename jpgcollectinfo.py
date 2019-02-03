@@ -11,7 +11,7 @@ import json
 
 # Google Geocoding API key
 GOOGLE_API_KEY = ""
-#GOOGLE_API_KEY_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\keyfile.txt"
+#google_api_key_file = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\keyfile.txt"
 GOOGLE_API_KEY_FILE = "D:\\temp\\keyfile.txt"
 
 #JPG_DIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek"
@@ -26,7 +26,7 @@ def read_api_key_from_file():
         try:
             f = open(GOOGLE_API_KEY_FILE, "r")
         except IOError:
-            print("IOError opening key file: " + GOOGLE_API_KEY_FILE + ". Using script's GOOGLE_API_KEY variable.")
+            print("IOError opening key file: " + GOOGLE_API_KEY_FILE + ". Using script's google_api_key variable.")
         else:
             global GOOGLE_API_KEY
             GOOGLE_API_KEY = f.readline().rstrip()
