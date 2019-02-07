@@ -11,8 +11,8 @@ from functools import partial
 EXIF_DB_FILE = "D:\\temp\\kepek\\exif_db.db"
 DEFAULTDIR = "D:\\temp\\kepek\\"
 
-#EXIF_DB_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\exif_db.db"
-#DEFAULTDIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek\\"
+# EXIF_DB_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\exif_db.db"
+# DEFAULTDIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek\\"
 
 CANVAS_WIDTH = 500
 CANVAS_HEIGHT = 500
@@ -23,8 +23,198 @@ GRID_HSIZE = 5
 
 GOOGLE_RECOMMENDATIONS = 4
 
+
 # TODO: slider goes to 0 to n-1, text says 0 of n
 # TODO: hunglish interface doesn't look good
+
+
+class imageshowUI:
+    def __init__(self, root_frame, canvas_width, canvas_height, canvas_bg_colour, grid_hsize, processed_tag_list,
+                 num_recommendations):
+        self.processed_tag_list = processed_tag_list
+        self.current_tag = 0
+        self.current_row = 0
+        self.grid_hsize = grid_hsize
+        self.num_recommendations = num_recommendations
+        self.canvas_width = canvas_width
+        self.canvas_height = canvas_height
+        self.canvas_bg_colour = canvas_bg_colour
+
+        # Main global frame
+        self.img_frame = Frame()
+        # Canvas to draw into
+        self.img_canvas = Canvas()
+        # Picture name
+        self.lbl_currentpicname = Label()
+
+        # Navi frame
+        self.navi_frame = Frame()
+        # Google buttons
+        self.google_buttons = []
+        self.create_widgets()
+
+    def create_widgets(self):
+        self.create_image_area()
+        self.create_pictitle()
+        self.create_picture_slider()
+        self.create_google_buttons()
+
+    def create_image_area(self):
+        self.img_canvas = Canvas(self.img_frame, width=self.canvas_width, height=self.canvas_height,
+                                 bg=self.canvas_bg_colour)
+        self.img_canvas.grid(row=0, column=0, rowspan=1, columnspan=self.grid_hsize, padx=5, pady=5)
+        self.current_row = self.current_row + 5
+
+    def create_pictitle(self):
+        self.lbl_currentpicname = Label(self.img_frame, text="currentpicname")
+        self.lbl_currentpicname.grid(column=0, row=self.current_row)
+        self.current_row = self.current_row + 1
+
+    def create_picture_slider(self):
+        # Creating next row of UI
+        # slider for quick navi
+        # next and previous buttons
+
+        self.navi_frame = Frame(self.img_frame)
+
+        btn_start = Button(self.navi_frame, text="|<", command=self.cb_start, anchor="e")
+        btn_left = Button(self.navi_frame, text="<<", command=self.cb_left, anchor="e")
+        self.scl_quicknavi = Scale(self.navi_frame, orient=HORIZONTAL, length=300,
+                                   from_=1, to=len(self.processed_tag_list), command=self.cb_quicknavi)
+        self.scl_quicknavi.set(self.current_tag)
+        btn_right = Button(self.navi_frame, text=">>", command=self.cb_right, anchor="w")
+        btn_last = Button(self.navi_frame, text=">|", command=self.cb_last, anchor="w")
+
+        btn_start.grid(row=0, column=0)
+        btn_left.grid(row=0, column=1)
+
+        self.scl_quicknavi.grid(row=0, column=2)
+        btn_right.grid(row=0, column=3)
+        btn_last.grid(row=0, column=4)
+        self.navi_frame.grid(row=self.current_row, column=0, columnspan=self.grid_hsize, padx=5, pady=5)
+        self.current_row += 1
+
+    def create_google_buttons(self):
+        for i in range(self.num_recommendations):
+            btn = Button(self.img_frame, text="Google{}".format(i),
+                         command=partial(self.cb_btn_google, i))
+            btn.grid(row=i + 1, columnspan=self.grid_hsize)
+            self.google_buttons.append(btn)
+
+    def set_processed_tag_list(self,procssed_tag_list):
+        self.processed_tag_list=procssed_tag_list
+        self.scl_quicknavi["to"]=len(self.processed_tag_list)
+        return
+
+    def cb_btn_google(self, button):
+        self.entry_renameto.delete(0, END)
+        self.entry_renameto.insert(0, self.google_buttons[button]["text"].lstrip())
+
+    def draw_image_to_canvas(self, im):
+        self.img_canvas.image = ImageTk.PhotoImage(im)
+        self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
+
+    def cb_left(self):
+        print("cb left")
+        if self.current_tag > 0:
+            self.current_tag -= 1
+            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
+            self.main_canvas.image = ImageTk.PhotoImage(self.im)
+            self.main_canvas.create_image(0, 0, image=self.main_canvas.image, anchor="nw")
+            self.update_all_widgets()
+
+    def cb_right(self):
+        print("cb right")
+        if len(self.processed_tag_list) - 1 > self.current_tag:
+            self.current_tag += 1
+            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
+            self.main_canvas.image = ImageTk.PhotoImage(self.im)
+            self.main_canvas.create_image(0, 0, image=self.main_canvas.image, anchor="nw")
+            self.update_all_widgets()
+
+    def cb_last(self):
+        print("cb last")
+        if len(self.processed_tag_list) != self.current_tag:
+            self.current_tag = len(self.processed_tag_list) - 1
+            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
+            self.main_canvas.image = ImageTk.PhotoImage(self.im)
+            self.main_canvas.create_image(0, 0, image=self.main_canvas.image, anchor="nw")
+            self.update_all_widgets()
+
+    def cb_start(self):
+        print("cb start")
+        self.current_tag = 0
+        self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
+        self.img_canvas.image = ImageTk.PhotoImage(self.im)
+        self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
+        self.update_all_widgets()
+
+    def cb_left(self):
+        print("cb left")
+        if self.current_tag > 0:
+            self.current_tag -= 1
+            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
+            self.img_canvas.image = ImageTk.PhotoImage(self.im)
+            self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
+            self.update_all_widgets()
+
+    def cb_right(self):
+        print("cb right")
+        if len(self.processed_tag_list) - 1 > self.current_tag:
+            self.current_tag += 1
+            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
+            self.img_canvas.image = ImageTk.PhotoImage(self.im)
+            self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
+            self.update_all_widgets()
+
+    def cb_last(self):
+        print("cb last")
+        if len(self.processed_tag_list) != self.current_tag:
+            self.current_tag = len(self.processed_tag_list) - 1
+            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
+            self.img_canvas.image = ImageTk.PhotoImage(self.im)
+            self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
+            self.update_all_widgets()
+
+    def cb_quicknavi(self, position):
+        self.current_tag = int(position) - 1
+        self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
+        self.img_canvas.image = ImageTk.PhotoImage(self.im)
+        self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
+        self.update_all_widgets()
+        # self.cb_right()
+
+    def update_all_widgets(self):
+        """
+        Will update all google labels, picture name, slider, settings info
+        :return: nothing
+        """
+
+        # Let's get the date of the picture
+        try:
+            a_date = "  " + self.processed_tag_list[self.current_tag]["EXIF DateTimeOriginal"].printable[:10]
+        except KeyError:
+            a_date = "1970:01:01 01:01:01"
+
+        a_date2 = re.sub(":", "", a_date)
+        a_date2 = a_date2 + "_"
+
+        # Let's update the name of the picture
+        self.lbl_currentpicname["text"] = self.processed_tag_list[self.current_tag]["myfilename"] + "   " \
+                                          + str(self.current_tag + 1) + " of " + str(len(self.processed_tag_list))
+
+        # Let's move the quick_navi slider to the right location
+        # Maybe on a wrong place since can be moved with buttons
+        self.scl_quicknavi.set(self.current_tag + 1)
+
+        # Try to display the address
+        # Can get both Key and Index error
+        for i, b in enumerate(self.google_buttons):
+            try:
+                print("Google{} {}".format(i, self.processed_tag_list[self.current_tag]["formatted_address_list"][i]))
+                b["text"] = a_date2 + self.processed_tag_list[self.current_tag]["formatted_address_list"][i]
+            except (KeyError, IndexError) as e:
+                b["text"] = a_date2 + ""
 
 
 class RenameUI:
@@ -33,22 +223,37 @@ class RenameUI:
         self.dir = dir
         self.db_file = db_file
         self.current_row = 0
+        self.grid_hsize = grid_hsize
+        self.lbl_currentpicname = Label()
+
         self.processed_tag_list = jpgcollectinfo.read_list_from_file(db_file)
 
         self.current_tag = 0
         # self.create_widgets()
         self.menu_bar = Menu()
         self.file_menu = Menu(self.menu_bar, tearoff=0)
-        self.filename = self.processed_tag_list[self.current_tag]["myfilename"]
-        self.im = load_image(self.filename)
-        self.main_frame = Frame()
-        self.main_canvas = Canvas(self.main_frame, width=canvas_width, height=canvas_height, bg=canvas_bg_colour)
-        self.grid_hsize = grid_hsize
-        self.create_canvas()
-        self.navi_frame = Frame()
-        self.scl_quicknavi = Scale(self.navi_frame, orient=HORIZONTAL, length=300,
-                                   from_=1, to=len(self.processed_tag_list), command=self.cb_quicknavi)
-        self.lbl_currentpicname = Label(self.root_window, text="currentpicname")
+
+        self.img_frame = Frame()
+        can1 = Canvas(self.img_frame)
+        can1.create_rectangle(1,1,self.img_frame.winfo_width()-1, self.img_frame.winfo_height()-1)
+
+        self.left_img = imageshowUI(self.img_frame, canvas_width, canvas_height, canvas_bg_colour, int(grid_hsize / 2),
+                                    self.processed_tag_list, num_recommendations)
+        self.right_img = imageshowUI(self.img_frame, canvas_width, canvas_height, canvas_bg_colour, int(grid_hsize / 2),
+                                     self.processed_tag_list, num_recommendations)
+
+        self.left_frame = self.left_img.img_frame
+        self.right_frame = self.right_img.img_frame
+
+        self.left_frame.grid(row=0, column=0)
+        self.right_frame.grid(row=0, column=1)
+        self.current_row = self.current_row + 5
+
+        #self.filename = self.processed_tag_list[self.current_tag]["myfilename"]
+        #im = load_image(self.filename)
+        #self.left_img.draw_image_to_canvas(im)
+        #self.right_img.draw_image_to_canvas(im)
+
         self.scl_withintime = Scale(self.root_window, orient=HORIZONTAL, length=300, to=300,
                                     command=self.cb_scale_withintime)
         self.lbl_numberofpic = Label(self.root_window, text=" percen belül készült képek száma  xxxx db")
@@ -58,13 +263,14 @@ class RenameUI:
                                           text="Source folder: {}       Exif DB file: {}".format(dir, db_file))
         self.create_widgets(num_recommendations)
 
+        self.left_img.cb_start()
+        self.right_img.cb_right()
 
 
     def create_widgets(self, num_recommendations):
         self.create_menu()
-        self.create_picture_slider()
+        self.current_row = self.current_row + 5
         self.create_filename_area()
-        self.create_google_buttons(num_recommendations)
         self.create_bottom_info_area()
 
     def create_menu(self):
@@ -80,41 +286,7 @@ class RenameUI:
         self.menu_bar.add_cascade(label="Help")
         self.root_window.config(menu=self.menu_bar)
 
-    def create_canvas(self):
-        # Creating next row of UI
-        # This is a frame and a canvas in the frame
-       
-        self.main_canvas.image = ImageTk.PhotoImage(self.im)
-        self.main_canvas.create_image(0, 0, image=self.main_canvas.image, anchor="nw")
-
-        self.main_frame.grid(row=self.current_row, column=0, rowspan=5, columnspan=self.grid_hsize, padx=5, pady=5)
-        self.main_canvas.grid(row=0, column=0, rowspan=1, columnspan=self.grid_hsize, padx=5, pady=5)
-        self.current_row = self.current_row + 5
-
-    def create_picture_slider(self):
-        # Creating next row of UI
-        # slider for quick navi
-        # next and previous buttons
-
-        btn_start = Button(self.navi_frame, text="|<", command=self.cb_start, anchor="e")
-        btn_left = Button(self.navi_frame, text="<<", command=self.cb_left, anchor="e")
-        self.scl_quicknavi.set(self.current_tag)
-        btn_right = Button(self.navi_frame, text=">>", command=self.cb_right, anchor="w")
-        btn_last = Button(self.navi_frame, text=">|", command=self.cb_last, anchor="w")
-
-        btn_start.grid(row=0, column=0)
-        btn_left.grid(row=0, column=1)
-        self.scl_quicknavi.grid(row=0, column=2)
-        btn_right.grid(row=0, column=3)
-        btn_last.grid(row=0, column=4)
-        self.navi_frame.grid(row=self.current_row, column=0, columnspan=self.grid_hsize, padx=5, pady=5)
-        self.current_row += 1
-
     def create_filename_area(self):
-        # Creating next row of UI
-        # which picture we are looking at
-        self.lbl_currentpicname.grid(row=self.current_row, column=0, columnspan=self.grid_hsize)
-        self.current_row += 1
 
         # Creating next row of UI
         # slider for how many to pics display at once
@@ -129,32 +301,17 @@ class RenameUI:
         # Creating next row of UI
         lbl_renameto = Label(self.root_window, text="Rename to")
         lbl_renameto.grid(row=self.current_row, column=0)
-        self.entry_renameto.grid(row=self.current_row, column=1, columnspan=self.grid_hsize-1)
+        self.entry_renameto.grid(row=self.current_row, column=1, columnspan=self.grid_hsize - 1)
 
         btn_ok = Button(self.root_window, text=" OK ", command=self.cb_rename)
         btn_ok.grid(row=self.current_row, column=4)
         self.current_row += 1
-
-    def create_google_buttons(self, num_recommendations):
-        for i in range(num_recommendations):
-            self.google_buttons.append(Button(self.root_window, text="Google{}".format(i),
-                                              command=partial(self.cb_btn_google, i)))
-            self.google_buttons[i].grid(row=self.current_row, columnspan=self.grid_hsize)
-            self.current_row += 1
 
     def create_bottom_info_area(self):
         # Creating next row of UI
         # Name of working folder and DB
         self.lbl_current_settings.grid(row=self.current_row, column=0, columnspan=self.grid_hsize)
         self.current_row += 1
-
-    def cb_start(self):
-        print("cb start")
-        self.current_tag = 0
-        self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-        self.main_canvas.image = ImageTk.PhotoImage(self.im)
-        self.main_canvas.create_image(0, 0, image=self.main_canvas.image, anchor="nw")
-        self.update_all_widgets()
 
     def cb_scale_withintime(self, position):
         self.update_all_widgets()
@@ -176,14 +333,10 @@ class RenameUI:
 
         # Let's update the name of the picture
         self.lbl_currentpicname["text"] = self.processed_tag_list[self.current_tag]["myfilename"] + "   " \
-                                          + str(self.current_tag+1) + " of " + str(len(self.processed_tag_list))
+                                          + str(self.current_tag + 1) + " of " + str(len(self.processed_tag_list))
 
         # Let's update the bottom info area
         self.lbl_current_settings["text"] = "Source folder: " + self.dir + "           Exif DB file: " + self.db_file
-
-        # Let's move the quick_navi slider to the right location
-        # Maybe on a wrong place since can be moved with buttons
-        self.scl_quicknavi.set(self.current_tag+1)
 
         #
         # Calculate the number of pic within range
@@ -216,17 +369,17 @@ class RenameUI:
             if abs(delta.total_seconds()) < max_delta:
                 count = count + 1
 
-# TODO: APULAI, I don't think your implementation works reliably, check proposed mod above
-# TODO: Also should it return 0 or 1 if we found only 1 picture (itself)???
-# TODO: And why don't you consider pictures before the current one?
-#        max_delta = datetime.timedelta(minutes=max_delta)
-#        for tag in self.processed_tag_list[self.current_tag:]:
-#            delta = jpgcollectinfo.timedifference(tag, self.processed_tag_list[self.current_tag])
-#            # print(delta, max_delta)
-#            if delta < max_delta:
-#                count = count + 1
-#            if delta > max_delta:
-#                break
+        # TODO: APULAI, I don't think your implementation works reliably, check proposed mod above
+        # TODO: Also should it return 0 or 1 if we found only 1 picture (itself)???
+        # TODO: And why don't you consider pictures before the current one?
+        #        max_delta = datetime.timedelta(minutes=max_delta)
+        #        for tag in self.processed_tag_list[self.current_tag:]:
+        #            delta = jpgcollectinfo.timedifference(tag, self.processed_tag_list[self.current_tag])
+        #            # print(delta, max_delta)
+        #            if delta < max_delta:
+        #                count = count + 1
+        #            if delta > max_delta:
+        #                break
         return count
 
     def cb_file(self):
@@ -303,9 +456,12 @@ class RenameUI:
         # We are working with globals, so we need to have the result in a global var
         self.processed_tag_list = new_processed_list
 
-        self.scl_quicknavi["to"] = len(self.processed_tag_list)
+        # update their copy of the working list
+        self.left_img.set_processed_tag_list(self.processed_tag_list)
+        self.right_img.set_processed_tag_list(self.processed_tag_list)
         # Display the first pic
-        self.cb_start()
+        self.left_img.cb_start()
+        self.right_img.cb_right()
 
     def cb_update_db(self):
         print("cb updatedb")
@@ -319,45 +475,6 @@ class RenameUI:
     def cb_rename(self):
         print("cb rename")
         # TODO: complete this
-
-    def cb_left(self):
-        print("cb left")
-        if self.current_tag > 0:
-            self.current_tag -= 1
-            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-            self.main_canvas.image = ImageTk.PhotoImage(self.im)
-            self.main_canvas.create_image(0, 0, image=self.main_canvas.image, anchor="nw")
-            self.update_all_widgets()
-
-    def cb_right(self):
-        print("cb right")
-        if len(self.processed_tag_list) - 1 > self.current_tag:
-            self.current_tag += 1
-            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-            self.main_canvas.image = ImageTk.PhotoImage(self.im)
-            self.main_canvas.create_image(0, 0, image=self.main_canvas.image, anchor="nw")
-            self.update_all_widgets()
-
-    def cb_last(self):
-        print("cb last")
-        if len(self.processed_tag_list) != self.current_tag:
-            self.current_tag = len(self.processed_tag_list) - 1
-            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-            self.main_canvas.image = ImageTk.PhotoImage(self.im)
-            self.main_canvas.create_image(0, 0, image=self.main_canvas.image, anchor="nw")
-            self.update_all_widgets()
-
-    def cb_quicknavi(self, position):
-        self.current_tag = int(position) - 1
-        self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-        self.main_canvas.image = ImageTk.PhotoImage(self.im)
-        self.main_canvas.create_image(0, 0, image=self.main_canvas.image, anchor="nw")
-        self.update_all_widgets()
-        # self.cb_right()
-
-    def cb_btn_google(self, button):
-        self.entry_renameto.delete(0, END)
-        self.entry_renameto.insert(0, self.google_buttons[button]["text"].lstrip())
 
 
 def load_image(filename):
@@ -396,7 +513,7 @@ def load_image(filename):
 
 def main():
     c = RenameUI(CANVAS_WIDTH, CANVAS_HEIGHT, CANVAS_BG_COLOUR, GRID_HSIZE, GOOGLE_RECOMMENDATIONS, DEFAULTDIR,
-                EXIF_DB_FILE)
+                 EXIF_DB_FILE)
     if len(c.processed_tag_list) < 1:
         exit(1)
 
@@ -404,6 +521,11 @@ def main():
 
     messagebox.showinfo("Information", "You can select a different working directory. \n Select a DB file. "
                                        "\n Run Scan ")
+
+    # Init the pictures
+    #c.left_img.cb_start()
+    #c.right_img.cb_right()
+
     c.root_window.mainloop()
 
 
