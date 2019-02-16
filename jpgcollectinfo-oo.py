@@ -11,14 +11,14 @@ import json
 
 # Google Geocoding API key
 GOOGLE_API_KEY = ""
-#google_api_key_file = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\keyfile.txt"
-google_api_key_file = "D:\\temp\\keyfile.txt"
+google_api_key_file = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\keyfile.txt"
+#google_api_key_file = "D:\\temp\\keyfile.txt"
 
-#JPG_DIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek"
-JPG_DIR = "D:\\temp\\kepek"
+JPG_DIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek"
+#JPG_DIR = "D:\\temp\\kepek"
 
-#EXIF_DB_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\exif_db.db"
-EXIF_DB_FILE = "D:\\temp\\kepek\\exif_db.db"
+EXIF_DB_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\exif_db.db"
+#EXIF_DB_FILE = "D:\\temp\\kepek\\exif_db.db"
 
 class exiflist:
     def __init__(self, jpg_dir, exif_dbfile, google_api_key_file):
@@ -73,10 +73,9 @@ class exiflist:
         """
         return iter(self.processed_tag_list)
 
-
     def add_google_map_info_for_unprocessedtags(self):
         """
-        Colledct info for the unprocessed part of the exif tags
+        Collect info for the unprocessed part of the exif tags
         Once read join processed and unprocessed list
         Clear unprocessed list
         :return:
@@ -88,7 +87,7 @@ class exiflist:
         # We will have to concatenate
         # the list of fresh files
         # with the list of already processed files
-        if (len(self.processed_tag_list) == 0):
+        if len(self.processed_tag_list) == 0:
             new_processed_list = self.unprocessed_tag_list
         else:
             new_processed_list = self.processed_tag_list + self.unprocessed_tag_list
@@ -100,7 +99,7 @@ class exiflist:
         self.processed_tag_list = new_processed_list
         self.unprocessed_tag_list=[]
 
-    def get_proccessed_tag(self, nth):
+    def get_processed_tag(self, nth):
         """
         Return the nth item of the processed list
         :param idx:
@@ -112,7 +111,7 @@ class exiflist:
             tag = None
         return tag
 
-    def get_unproccessed_tag(self, nth):
+    def get_unprocessed_tag(self, nth):
         """
         Return the nth item of the processed list
         :param idx:
@@ -123,8 +122,6 @@ class exiflist:
         except IndexError:
             tag = None
         return tag
-
-
 
     def _read_api_key_from_file(self):
         if self.google_api_key_file != "":
@@ -158,7 +155,6 @@ class exiflist:
 
         return d + (m / 60.0) + (s / 3600.0)
 
-
     def _get_exif_location(self, exif_data):
         """
         Returns the latitude and longitude, if available, from the provided exif_data (obtained through get_exif_data above)
@@ -181,7 +177,6 @@ class exiflist:
                 lon = 0 - lon
 
         return lat, lon
-
 
     def _printabledatatime(self, tag):
         try:
@@ -206,7 +201,7 @@ class exiflist:
         return
 
     #TODO: Ez itt még nagyon szar
-    def timedifference(self,tag1,tag2):
+    def timedifference(self, tag1, tag2):
         """
         Return the timedelta of 2 tags
         :param tag1:
@@ -236,10 +231,10 @@ class exiflist:
         taglist = list()
         for filename in filelist:
             try:
-                f = open(filename,"rb")
+                f = open(filename, "rb")
                 tags = exifread.process_file(f)
                 f.close()
-                tags["myfilename"]=filename
+                tags["myfilename"] = filename
                 taglist.append(tags)
             except Exception as e:
                 print("Warning: file cannot be opened. Exception: {}".format(filelist["filename"], e))
@@ -278,7 +273,6 @@ class exiflist:
     def put_unprocessed_tags(self,taglist):
         self.unprocessed_tag_list=taglist
 
-
     def _filtertags(self, taglist):
         """input: list of tags
         return: only the list of location related tags"""
@@ -297,7 +291,6 @@ class exiflist:
 
         return smalllist
 
-
     def _add_decimal_GPS(self, taglist):
         """Funcion we need to convert the strange EXIF Coordinates to decimals values
         so we can use them with google
@@ -311,12 +304,10 @@ class exiflist:
                     item["mylon"]=lon
         return
 
-
     def _findjpg(self, folder):
         # List all jpg
         filelist = glob.glob(folder + '/**/*.jpg', recursive=True)
         return filelist
-
 
     def propose_name(self, item):
         """
@@ -339,7 +330,6 @@ class exiflist:
             address=item["formatted_address_list"][0]
 
         return date+"_"+address
-
 
     def _add_google_maps_info(self, my_list, google_api_key):
         """ Enhances a list of EXIF info with the Google Maps API location information """
@@ -404,7 +394,6 @@ class exiflist:
         f.close()
         return my_list
 
-
     def join_pickle_dump_files(self, out_file, in_file1, in_file2):
         """ Copies the content of two pickle dump files into a single file. Returns True on success.
         TODO: This method requires heaps of memory, but lazy programmers don't care about memory consumption. Fix it!"""
@@ -414,10 +403,8 @@ class exiflist:
 
         return self._save_list_to_file(my_list1+my_list2, out_file)
 
-
     def _remove_processed_files(self, file_list, processed_tag_list):
         """ Removes the items from file_list which have been processed already. """
-
 
         files_in_processed_list = list()
         for item in processed_tag_list:
@@ -438,16 +425,12 @@ class exiflist:
 
     def _save_list_to_file(self):
         self._save_list_to_file(self.processed_tag_list, self.exif_dbfile)
-
-
-
 #
 #
 # Not in class
 # These do not really fit well into my class
 
 # So they remain in module
-
 
 
 def get_distance(lat1, lon1, lat2, lon2):
@@ -477,11 +460,7 @@ def get_distance(lat1, lon1, lat2, lon2):
 
     distance = R * c
 
-    return (distance)
-
-
-
-
+    return distance
 
 
 #

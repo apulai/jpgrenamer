@@ -8,14 +8,14 @@ import datetime
 import jpgcollectinfo
 from functools import partial
 
-EXIF_DB_FILE = "D:\\temp\\kepek\\exif_db.db"
-DEFAULTDIR = "D:\\temp\\kepek\\"
+# EXIF_DB_FILE = "D:\\temp\\kepek\\exif_db.db"
+# DEFAULTDIR = "D:\\temp\\kepek\\"
 
-# EXIF_DB_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\exif_db.db"
-# DEFAULTDIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek\\"
+EXIF_DB_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\exif_db.db"
+DEFAULTDIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek\\"
 
-CANVAS_WIDTH = 500
-CANVAS_HEIGHT = 500
+CANVAS_WIDTH = 600
+CANVAS_HEIGHT = 600
 CANVAS_BG_COLOUR = 'white'
 
 # Horizontal SIZE of GRID
@@ -24,21 +24,22 @@ GRID_HSIZE = 5
 GOOGLE_RECOMMENDATIONS = 4
 
 
-# TODO: slider goes to 0 to n-1, text says 0 of n
 # TODO: hunglish interface doesn't look good
 
 
-class imageshowUI:
-    def __init__(self, root_frame, canvas_width, canvas_height, canvas_bg_colour, grid_hsize, processed_tag_list,
-                 num_recommendations):
-        self.processed_tag_list = processed_tag_list
+class ImageShowUI:
+#    def __init__(self, root_frame, canvas_width, canvas_height, canvas_bg_colour, grid_hsize, processed_tag_list,
+#                 num_recommendations):
+    def __init__(self, renameui_instance):
+        self.observer_subscribers = set()
+        self.processed_tag_list = renameui_instance.processed_tag_list
         self.current_tag = 0
         self.current_row = 0
-        self.grid_hsize = grid_hsize
-        self.num_recommendations = num_recommendations
-        self.canvas_width = canvas_width
-        self.canvas_height = canvas_height
-        self.canvas_bg_colour = canvas_bg_colour
+        self.grid_hsize = renameui_instance.grid_hsize
+        self.num_recommendations = renameui_instance.num_recommendations
+        self.canvas_width = renameui_instance.canvas_width
+        self.canvas_height = renameui_instance.canvas_height
+        self.canvas_bg_colour = renameui_instance.canvas_bg_colour
 
         # Main global frame
         self.img_frame = Frame()
@@ -101,48 +102,22 @@ class imageshowUI:
             btn.grid(row=i + 1, columnspan=self.grid_hsize)
             self.google_buttons.append(btn)
 
-    def set_processed_tag_list(self,procssed_tag_list):
-        self.processed_tag_list=procssed_tag_list
-        self.scl_quicknavi["to"]=len(self.processed_tag_list)
-        return
+    def set_processed_tag_list(self, procssed_tag_list):
+        self.processed_tag_list = procssed_tag_list
+        self.scl_quicknavi["to"] = len(self.processed_tag_list)
 
     def cb_btn_google(self, button):
-        self.entry_renameto.delete(0, END)
-        self.entry_renameto.insert(0, self.google_buttons[button]["text"].lstrip())
+        print("Google button pushed, dispatching message to observer:", self.google_buttons[button]["text"].lstrip())
+        self.observer_dispatch(self.google_buttons[button]["text"].lstrip())
+        # self.entry_renameto.delete(0, END)
+        # self.entry_renameto.insert(0, self.google_buttons[button]["text"].lstrip())
 
     def draw_image_to_canvas(self, im):
         self.img_canvas.image = ImageTk.PhotoImage(im)
         self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
 
-    def cb_left(self):
-        print("cb left")
-        if self.current_tag > 0:
-            self.current_tag -= 1
-            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-            self.main_canvas.image = ImageTk.PhotoImage(self.im)
-            self.main_canvas.create_image(0, 0, image=self.main_canvas.image, anchor="nw")
-            self.update_all_widgets()
-
-    def cb_right(self):
-        print("cb right")
-        if len(self.processed_tag_list) - 1 > self.current_tag:
-            self.current_tag += 1
-            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-            self.main_canvas.image = ImageTk.PhotoImage(self.im)
-            self.main_canvas.create_image(0, 0, image=self.main_canvas.image, anchor="nw")
-            self.update_all_widgets()
-
-    def cb_last(self):
-        print("cb last")
-        if len(self.processed_tag_list) != self.current_tag:
-            self.current_tag = len(self.processed_tag_list) - 1
-            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-            self.main_canvas.image = ImageTk.PhotoImage(self.im)
-            self.main_canvas.create_image(0, 0, image=self.main_canvas.image, anchor="nw")
-            self.update_all_widgets()
-
     def cb_start(self):
-        print("cb start")
+        # print("cb start")
         self.current_tag = 0
         self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
         self.img_canvas.image = ImageTk.PhotoImage(self.im)
@@ -150,7 +125,7 @@ class imageshowUI:
         self.update_all_widgets()
 
     def cb_left(self):
-        print("cb left")
+        # print("cb left")
         if self.current_tag > 0:
             self.current_tag -= 1
             self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
@@ -159,7 +134,7 @@ class imageshowUI:
             self.update_all_widgets()
 
     def cb_right(self):
-        print("cb right")
+        # print("cb right")
         if len(self.processed_tag_list) - 1 > self.current_tag:
             self.current_tag += 1
             self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
@@ -168,7 +143,7 @@ class imageshowUI:
             self.update_all_widgets()
 
     def cb_last(self):
-        print("cb last")
+        # print("cb last")
         if len(self.processed_tag_list) != self.current_tag:
             self.current_tag = len(self.processed_tag_list) - 1
             self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
@@ -182,7 +157,6 @@ class imageshowUI:
         self.img_canvas.image = ImageTk.PhotoImage(self.im)
         self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
         self.update_all_widgets()
-        # self.cb_right()
 
     def update_all_widgets(self):
         """
@@ -211,10 +185,21 @@ class imageshowUI:
         # Can get both Key and Index error
         for i, b in enumerate(self.google_buttons):
             try:
-                print("Google{} {}".format(i, self.processed_tag_list[self.current_tag]["formatted_address_list"][i]))
+                # print("Google{} {}".format(i, self.processed_tag_list[self.current_tag]["formatted_address_list"][i]))
                 b["text"] = a_date2 + self.processed_tag_list[self.current_tag]["formatted_address_list"][i]
             except (KeyError, IndexError) as e:
                 b["text"] = a_date2 + ""
+
+    def observer_register(self, who):
+        print("registering observer for {}, who {}".format(self, who))
+        self.observer_subscribers.add(who)
+
+    def observer_unregister(self, who):
+        self.observer_subscribers.discard(who)
+
+    def observer_dispatch(self, message):
+        for subscriber in self.observer_subscribers:
+            subscriber.observer_google_button_pushed(message)
 
 
 class RenameUI:
@@ -224,6 +209,10 @@ class RenameUI:
         self.db_file = db_file
         self.current_row = 0
         self.grid_hsize = grid_hsize
+        self.num_recommendations = num_recommendations
+        self.canvas_width = canvas_width
+        self.canvas_height = canvas_height
+        self.canvas_bg_colour = canvas_bg_colour
         self.lbl_currentpicname = Label()
 
         self.processed_tag_list = jpgcollectinfo.read_list_from_file(db_file)
@@ -235,13 +224,16 @@ class RenameUI:
 
         self.img_frame = Frame()
         can1 = Canvas(self.img_frame)
-        can1.create_rectangle(1,1,self.img_frame.winfo_width()-1, self.img_frame.winfo_height()-1)
+        can1.create_rectangle(1, 1, self.img_frame.winfo_width()-1, self.img_frame.winfo_height()-1)
 
-        self.left_img = imageshowUI(self.img_frame, canvas_width, canvas_height, canvas_bg_colour, int(grid_hsize / 2),
-                                    self.processed_tag_list, num_recommendations)
-        self.right_img = imageshowUI(self.img_frame, canvas_width, canvas_height, canvas_bg_colour, int(grid_hsize / 2),
-                                     self.processed_tag_list, num_recommendations)
-
+#        self.left_img = ImageShowUI(self.img_frame, canvas_width, canvas_height, canvas_bg_colour, int(grid_hsize / 2),
+#                                    self.processed_tag_list, num_recommendations)
+        self.left_img = ImageShowUI(self)
+        self.left_img.observer_register(self)
+#        self.right_img = ImageShowUI(self.img_frame, canvas_width, canvas_height, canvas_bg_colour, int(grid_hsize / 2),
+#                                     self.processed_tag_list, num_recommendations)
+        self.right_img = ImageShowUI(self)
+        self.right_img.observer_register(self)
         self.left_frame = self.left_img.img_frame
         self.right_frame = self.right_img.img_frame
 
@@ -261,13 +253,12 @@ class RenameUI:
         self.google_buttons = []
         self.lbl_current_settings = Label(self.root_window,
                                           text="Source folder: {}       Exif DB file: {}".format(dir, db_file))
-        self.create_widgets(num_recommendations)
+        self.create_widgets()
 
         self.left_img.cb_start()
-        self.right_img.cb_right()
+        self.right_img.cb_right()       # displaying the next picture by default on the right hand side
 
-
-    def create_widgets(self, num_recommendations):
+    def create_widgets(self):
         self.create_menu()
         self.current_row = self.current_row + 5
         self.create_filename_area()
@@ -301,7 +292,7 @@ class RenameUI:
         # Creating next row of UI
         lbl_renameto = Label(self.root_window, text="Rename to")
         lbl_renameto.grid(row=self.current_row, column=0)
-        self.entry_renameto.grid(row=self.current_row, column=1, columnspan=self.grid_hsize - 1)
+        self.entry_renameto.grid(row=self.current_row, column=1, columnspan=self.grid_hsize-1)
 
         btn_ok = Button(self.root_window, text=" OK ", command=self.cb_rename)
         btn_ok.grid(row=self.current_row, column=4)
@@ -348,7 +339,7 @@ class RenameUI:
         # Can get both Key and Index error
         for i, b in enumerate(self.google_buttons):
             try:
-                print("Google{} {}".format(i, self.processed_tag_list[self.current_tag]["formatted_address_list"][i]))
+                # print("Google{} {}".format(i, self.processed_tag_list[self.current_tag]["formatted_address_list"][i]))
                 b["text"] = a_date2 + self.processed_tag_list[self.current_tag]["formatted_address_list"][i]
             except (KeyError, IndexError) as e:
                 b["text"] = a_date2 + ""
@@ -476,6 +467,12 @@ class RenameUI:
         print("cb rename")
         # TODO: complete this
 
+    def observer_google_button_pushed(self, button_text):
+        print("Google button pushed, message received by observer:", button_text)
+        self.entry_renameto.delete(0, END)
+        self.entry_renameto.insert(0, button_text)
+        self.update_all_widgets()
+
 
 def load_image(filename):
     """
@@ -503,7 +500,7 @@ def load_image(filename):
                 h = h * (1 / r2)
 
         size = int(w), int(h)
-        print(size)
+        # print(size)
         im.thumbnail(size)
         return im
     except IOError:
