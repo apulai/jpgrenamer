@@ -28,10 +28,9 @@ GOOGLE_RECOMMENDATIONS = 4
 
 
 class ImageShowUI:
-#    def __init__(self, root_frame, canvas_width, canvas_height, canvas_bg_colour, grid_hsize, processed_tag_list,
-#                 num_recommendations):
-    def __init__(self, renameui_instance):
-        self.observer_subscribers = set()
+    def __init__(self, renameui_instance, events):
+        self.observer_subscribers = {event: dict()
+                                     for event in events}
         self.processed_tag_list = renameui_instance.processed_tag_list
         self.current_tag = 0
         self.current_row = 0
@@ -102,13 +101,13 @@ class ImageShowUI:
             btn.grid(row=i + 1, columnspan=self.grid_hsize)
             self.google_buttons.append(btn)
 
-    def set_processed_tag_list(self, procssed_tag_list):
-        self.processed_tag_list = procssed_tag_list
+    def set_processed_tag_list(self, processed_tag_list):
+        self.processed_tag_list = processed_tag_list
         self.scl_quicknavi["to"] = len(self.processed_tag_list)
 
     def cb_btn_google(self, button):
         print("Google button pushed, dispatching message to observer:", self.google_buttons[button]["text"].lstrip())
-        self.observer_dispatch(self.google_buttons[button]["text"].lstrip())
+        self.observer_dispatch('google_button_pushed', self.google_buttons[button]["text"].lstrip())
         # self.entry_renameto.delete(0, END)
         # self.entry_renameto.insert(0, self.google_buttons[button]["text"].lstrip())
 
@@ -157,6 +156,12 @@ class ImageShowUI:
         self.img_canvas.image = ImageTk.PhotoImage(self.im)
         self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
         self.update_all_widgets()
+        # If there is an observer for the slider movement, we have to dispatch a message
+        try:
+            self.observer_dispatch('picture_slider_moved', position)
+        except KeyError:
+            # print("No observer for current object, do nothing")
+            pass
 
     def update_all_widgets(self):
         """
@@ -190,16 +195,41 @@ class ImageShowUI:
             except (KeyError, IndexError) as e:
                 b["text"] = a_date2 + ""
 
-    def observer_register(self, who):
-        print("registering observer for {}, who {}".format(self, who))
-        self.observer_subscribers.add(who)
+    def observer_get_subscribers(self, event):
+        """ Returns the list of observers (subscribers) for a particular event """
 
-    def observer_unregister(self, who):
-        self.observer_subscribers.discard(who)
+        return self.observer_subscribers[event]
 
-    def observer_dispatch(self, message):
-        for subscriber in self.observer_subscribers:
-            subscriber.observer_google_button_pushed(message)
+    def observer_register(self, event, who, callback=None):
+        """ Registers and observer for a particular event with a callback function """
+
+        print("registering observer for {}, who {}, for event {}".format(self, who, event))
+        if callback is None:
+            callback = getattr(who, 'observer_google_button_pushed')
+        self.observer_get_subscribers(event)[who] = callback
+
+    def observer_unregister(self, event, who):
+        """ Unregisters an observer for an event """
+
+        del self.observer_get_subscribers(event)[who]
+
+    def observer_dispatch(self, event, message):
+        """ Dispatches the message to the observers about an event using the appropriate callback function """
+
+        for subscriber, callback in self.observer_get_subscribers(event).items():
+            callback(message)
+
+    def observer_picture_slider_moved(self, new_position):
+        """ If the left picture slider was moved, this call back function repositions the right slider to picture n+1,
+        if possible. Reminder: position == currant_tag+1 """
+
+        print("Picture slider moved, message received by observer:", new_position)
+        if int(new_position) < len(self.processed_tag_list):
+            self.current_tag = int(new_position)
+            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
+            self.img_canvas.image = ImageTk.PhotoImage(self.im)
+            self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
+            self.update_all_widgets()
 
 
 class RenameUI:
@@ -228,12 +258,14 @@ class RenameUI:
 
 #        self.left_img = ImageShowUI(self.img_frame, canvas_width, canvas_height, canvas_bg_colour, int(grid_hsize / 2),
 #                                    self.processed_tag_list, num_recommendations)
-        self.left_img = ImageShowUI(self)
-        self.left_img.observer_register(self)
-#        self.right_img = ImageShowUI(self.img_frame, canvas_width, canvas_height, canvas_bg_colour, int(grid_hsize / 2),
+        self.left_img = ImageShowUI(self, ['google_button_pushed', 'picture_slider_moved'])
+        self.left_img.observer_register('google_button_pushed', self, self.observer_google_button_pushed)
+#       self.right_img = ImageShowUI(self.img_frame, canvas_width, canvas_height, canvas_bg_colour, int(grid_hsize / 2),
 #                                     self.processed_tag_list, num_recommendations)
-        self.right_img = ImageShowUI(self)
-        self.right_img.observer_register(self)
+        self.right_img = ImageShowUI(self, ['google_button_pushed'])
+        self.right_img.observer_register('google_button_pushed', self, self.observer_google_button_pushed)
+        self.left_img.observer_register('picture_slider_moved', self.right_img,
+                                        self.right_img.observer_picture_slider_moved)
         self.left_frame = self.left_img.img_frame
         self.right_frame = self.right_img.img_frame
 
@@ -468,6 +500,8 @@ class RenameUI:
         # TODO: complete this
 
     def observer_google_button_pushed(self, button_text):
+        """ If a google button was pushed, this callback function updates the renameto entry field """
+        
         print("Google button pushed, message received by observer:", button_text)
         self.entry_renameto.delete(0, END)
         self.entry_renameto.insert(0, button_text)
