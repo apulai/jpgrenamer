@@ -8,38 +8,94 @@ import datetime
 import jpgcollectinfo
 from functools import partial
 
-# EXIF_DB_FILE = "D:\\temp\\kepek\\exif_db.db"
-# DEFAULTDIR = "D:\\temp\\kepek\\"
+#EXIF_DB_FILE = "D:\\temp\\kepek\\exif_db.db"
+#DEFAULTDIR = "D:\\temp\\kepek\\"
 
-EXIF_DB_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\exif_db.db"
-DEFAULTDIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek\\"
+EXIF_DB_FILE = "D:\\kepek\\2017\\201708_Montenegro\\exif_db.db"
+DEFAULTDIR = "D:\\kepek\\2017\\201708_Montenegro"
+
+# EXIF_DB_FILE = "C:\\Users\\PatrikJelinko\\PycharmProjects\\jpgrenamer\\exif_db.db"
+# DEFAULTDIR = "C:\\Users\\PatrikJelinko\\PycharmProjects\\kepatnevezo\\kepek\\"
 
 CANVAS_WIDTH = 600
-CANVAS_HEIGHT = 600
+CANVAS_HEIGHT = 400
 CANVAS_BG_COLOUR = 'white'
 
+UI_LEFT = 0
+UI_RIGHT = 1
 # Horizontal SIZE of GRID
 GRID_HSIZE = 5
 
 GOOGLE_RECOMMENDATIONS = 4
 
+class Publisher:
+    # We use the observer pattern. notifier is the Subject where
+    # observer object register
+    def __init__(self, events):
+        """
+        This is the Subject or the central object which others observe
+        We call it publisher here
+        :param events: list of string for which you can register yourself and a callback
+        """
+        self.observer_subscribers = {event: dict()
+                                     for event in events}
 
-# TODO: hunglish interface doesn't look good
+    def observer_get_subscribers(self, event):
+        """ Returns the list of observers (subscribers) for a particular event """
+        return self.observer_subscribers[event]
+
+    def observer_register(self, event, who, callback=None):
+        """
+        :param event: Name of the event
+        :param who: which instance is registering to this callback
+        :param callback: what function to call in case of dispatch, if none is give we will try to call receive_message
+        :return:
+        """
+        print("registering observer for {}, who {}, for event {}".format(self, who, event))
+        if callback is None:
+            callback = getattr(who, 'receive_message')
+        self.observer_get_subscribers(event)[who] = callback
+
+        print("\nShowing current registrations")
+        for subscriber, callback in self.observer_get_subscribers(event).items():
+            print("Event:{} Subscriber:{} Callback:{}".format(event, subscriber, callback))
+
+    def observer_unregister(self, event, who):
+        """ Unregisters an observer for an event """
+
+        del self.observer_get_subscribers(event)[who]
+
+    def observer_dispatch(self, sender, event, message):
+        """ Dispatches the message to the observers about an event using the appropriate callback function """
+
+        for subscriber, callback in self.observer_get_subscribers(event).items():
+            if subscriber != sender:
+                print("Dispatching message from {} to {}".format(sender, subscriber))
+                callback(message)
+            else:
+                print("Not sending message when sender and subscriber are the same")
 
 
 class ImageShowUI:
-    def __init__(self, renameui_instance, events):
-        self.observer_subscribers = {event: dict()
-                                     for event in events}
+
+    def __init__(self, renameui_instance, pub):
+        """
+        :param renameui_instance: this is our parent object, we use it's variables
+        :param pub: publisher we will send our messages to this guy
+        """
+
         self.processed_tag_list = renameui_instance.processed_tag_list
         self.current_tag = 0
+        self.myside=UI_LEFT
         self.current_row = 0
         self.grid_hsize = renameui_instance.grid_hsize
         self.num_recommendations = renameui_instance.num_recommendations
         self.canvas_width = renameui_instance.canvas_width
         self.canvas_height = renameui_instance.canvas_height
         self.canvas_bg_colour = renameui_instance.canvas_bg_colour
-
+        # We use the observer pattern. Publisher is the central object
+        # which will dispatch messages
+        self.publisher = pub
         # Main global frame
         self.img_frame = Frame()
         # Canvas to draw into
@@ -60,6 +116,10 @@ class ImageShowUI:
         self.create_google_buttons()
 
     def create_image_area(self):
+        """
+        This is simply a canvas we will draw here the image
+        :return:
+        """
         self.img_canvas = Canvas(self.img_frame, width=self.canvas_width, height=self.canvas_height,
                                  bg=self.canvas_bg_colour)
         self.img_canvas.grid(row=0, column=0, rowspan=1, columnspan=self.grid_hsize, padx=5, pady=5)
@@ -67,7 +127,7 @@ class ImageShowUI:
 
     def create_pictitle(self):
         self.lbl_currentpicname = Label(self.img_frame, text="currentpicname")
-        self.lbl_currentpicname.grid(column=0, row=self.current_row)
+        self.lbl_currentpicname.grid(column=0, row=self.current_row, columnspan=self.grid_hsize )
         self.current_row = self.current_row + 1
 
     def create_picture_slider(self):
@@ -98,7 +158,7 @@ class ImageShowUI:
         for i in range(self.num_recommendations):
             btn = Button(self.img_frame, text="Google{}".format(i),
                          command=partial(self.cb_btn_google, i))
-            btn.grid(row=i + 1, columnspan=self.grid_hsize)
+            btn.grid(row=i + 1, columnspan=self.grid_hsize, sticky="NSEW",)
             self.google_buttons.append(btn)
 
     def set_processed_tag_list(self, processed_tag_list):
@@ -107,9 +167,7 @@ class ImageShowUI:
 
     def cb_btn_google(self, button):
         print("Google button pushed, dispatching message to observer:", self.google_buttons[button]["text"].lstrip())
-        self.observer_dispatch('google_button_pushed', self.google_buttons[button]["text"].lstrip())
-        # self.entry_renameto.delete(0, END)
-        # self.entry_renameto.insert(0, self.google_buttons[button]["text"].lstrip())
+        self.publisher.observer_dispatch(self, 'google_button_pushed', self.google_buttons[button]["text"].lstrip())
 
     def draw_image_to_canvas(self, im):
         self.img_canvas.image = ImageTk.PhotoImage(im)
@@ -119,8 +177,7 @@ class ImageShowUI:
         # print("cb start")
         self.current_tag = 0
         self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-        self.img_canvas.image = ImageTk.PhotoImage(self.im)
-        self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
+        self.draw_image_to_canvas(self.im)
         self.update_all_widgets()
 
     def cb_left(self):
@@ -128,8 +185,7 @@ class ImageShowUI:
         if self.current_tag > 0:
             self.current_tag -= 1
             self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-            self.img_canvas.image = ImageTk.PhotoImage(self.im)
-            self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
+            self.draw_image_to_canvas(self.im)
             self.update_all_widgets()
 
     def cb_right(self):
@@ -137,8 +193,7 @@ class ImageShowUI:
         if len(self.processed_tag_list) - 1 > self.current_tag:
             self.current_tag += 1
             self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-            self.img_canvas.image = ImageTk.PhotoImage(self.im)
-            self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
+            self.draw_image_to_canvas(self.im)
             self.update_all_widgets()
 
     def cb_last(self):
@@ -146,22 +201,24 @@ class ImageShowUI:
         if len(self.processed_tag_list) != self.current_tag:
             self.current_tag = len(self.processed_tag_list) - 1
             self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-            self.img_canvas.image = ImageTk.PhotoImage(self.im)
-            self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
+            self.draw_image_to_canvas(self.im)
             self.update_all_widgets()
 
     def cb_quicknavi(self, position):
-        self.current_tag = int(position) - 1
-        self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-        self.img_canvas.image = ImageTk.PhotoImage(self.im)
-        self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
-        self.update_all_widgets()
-        # If there is an observer for the slider movement, we have to dispatch a message
-        try:
-            self.observer_dispatch('picture_slider_moved', position)
-        except KeyError:
-            # print("No observer for current object, do nothing")
+        if self.current_tag == int(position) - 1:
+            # we are at the right position
             pass
+        else:
+            self.current_tag = int(position) - 1
+            try:
+                self.publisher.observer_dispatch(self, 'picture_slider_moved',self.current_tag)
+            except KeyError:
+                print("No observer for current object, do nothing")
+                pass
+            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
+            self.draw_image_to_canvas(self.im)
+            self.update_all_widgets()
+            # If there is an observer for the slider movement, we have to dispatch a message
 
     def update_all_widgets(self):
         """
@@ -182,9 +239,6 @@ class ImageShowUI:
         self.lbl_currentpicname["text"] = self.processed_tag_list[self.current_tag]["myfilename"] + "   " \
                                           + str(self.current_tag + 1) + " of " + str(len(self.processed_tag_list))
 
-        # Let's move the quick_navi slider to the right location
-        # Maybe on a wrong place since can be moved with buttons
-        self.scl_quicknavi.set(self.current_tag + 1)
 
         # Try to display the address
         # Can get both Key and Index error
@@ -195,45 +249,66 @@ class ImageShowUI:
             except (KeyError, IndexError) as e:
                 b["text"] = a_date2 + ""
 
-    def observer_get_subscribers(self, event):
-        """ Returns the list of observers (subscribers) for a particular event """
+        # Let's check if we need to move the slider
+        if self.scl_quicknavi.get() != self.current_tag+1:
+            # Let's move the quick_navi slider to the right location
+            # Maybe on a wrong place since can be moved with buttons
+            self.scl_quicknavi.set(self.current_tag + 1)
+            # We changed slider position, so we need to send an update
+            try:
+                self.publisher.observer_dispatch(self, 'picture_slider_moved',self.current_tag)
+            except KeyError:
+                print("No observer for current object, do nothing")
+                pass
 
-        return self.observer_subscribers[event]
-
-    def observer_register(self, event, who, callback=None):
-        """ Registers and observer for a particular event with a callback function """
-
-        print("registering observer for {}, who {}, for event {}".format(self, who, event))
-        if callback is None:
-            callback = getattr(who, 'observer_google_button_pushed')
-        self.observer_get_subscribers(event)[who] = callback
-
-    def observer_unregister(self, event, who):
-        """ Unregisters an observer for an event """
-
-        del self.observer_get_subscribers(event)[who]
-
-    def observer_dispatch(self, event, message):
-        """ Dispatches the message to the observers about an event using the appropriate callback function """
-
-        for subscriber, callback in self.observer_get_subscribers(event).items():
-            callback(message)
-
-    def observer_picture_slider_moved(self, new_position):
+    def observer_picture_slider_moved(self, peers_position):
         """ If the left picture slider was moved, this call back function repositions the right slider to picture n+1,
         if possible. Reminder: position == currant_tag+1 """
 
-        print("Picture slider moved, message received by observer:", new_position)
-        if int(new_position) < len(self.processed_tag_list):
-            self.current_tag = int(new_position)
-            self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
-            self.img_canvas.image = ImageTk.PhotoImage(self.im)
-            self.img_canvas.create_image(0, 0, image=self.img_canvas.image, anchor="nw")
-            self.update_all_widgets()
+        print("Picture slider moved, message received by observer:", peers_position)
+        if self.myside == UI_LEFT:
+            # I am left side, I have to be smaller
+            if self.current_tag  < int(peers_position):
+                print("Left is more to the left: do nothing")
+                pass
+            else:
+                print("Left needs to move {} {} ".format(self.current_tag, int(peers_position)))
+                self.current_tag = int(peers_position)-1
+                self.current_tag = max( self.current_tag, 0 )
+
+        elif self.myside == UI_RIGHT:
+            # I am the right side, I have to be bigger
+            if self.current_tag > int(peers_position):
+                print("Right is more to the right")
+                pass
+            else:
+                print("Right needs to move {} {} ".format(self.current_tag, int(peers_position)))
+                self.current_tag = int(peers_position)+1
+                self.current_tag = min(self.current_tag, len(self.processed_tag_list)-1)
+
+
+        self.im = load_image(self.processed_tag_list[self.current_tag]["myfilename"])
+        self.draw_image_to_canvas(self.im)
+        self.update_all_widgets()
+
+    def receive_message(self, message):
+        """
+        Default observer callback function
+        :return:
+        """
+        print("{} :received {}".format(self, message))
+
+    def get_currenttag(self):
+        return self.current_tag
+
+    def goto_tag(self,position):
+        self.current_tag=position
+        self.update_all_widgets()
 
 
 class RenameUI:
-    def __init__(self, canvas_width, canvas_height, canvas_bg_colour, grid_hsize, num_recommendations, dir, db_file):
+    def __init__(self, canvas_width, canvas_height, canvas_bg_colour, grid_hsize, num_recommendations, dir, db_file,
+                 publisher):
         self.root_window = Tk()
         self.dir = dir
         self.db_file = db_file
@@ -244,61 +319,30 @@ class RenameUI:
         self.canvas_height = canvas_height
         self.canvas_bg_colour = canvas_bg_colour
         self.lbl_currentpicname = Label()
+        # This is a message dispatcher object
+        self.publisher = publisher
 
         self.processed_tag_list = jpgcollectinfo.read_list_from_file(db_file)
 
         self.current_tag = 0
-        # self.create_widgets()
-        self.menu_bar = Menu()
-        self.file_menu = Menu(self.menu_bar, tearoff=0)
 
-        self.img_frame = Frame()
-        can1 = Canvas(self.img_frame)
-        can1.create_rectangle(1, 1, self.img_frame.winfo_width()-1, self.img_frame.winfo_height()-1)
-
-#        self.left_img = ImageShowUI(self.img_frame, canvas_width, canvas_height, canvas_bg_colour, int(grid_hsize / 2),
-#                                    self.processed_tag_list, num_recommendations)
-        self.left_img = ImageShowUI(self, ['google_button_pushed', 'picture_slider_moved'])
-        self.left_img.observer_register('google_button_pushed', self, self.observer_google_button_pushed)
-#       self.right_img = ImageShowUI(self.img_frame, canvas_width, canvas_height, canvas_bg_colour, int(grid_hsize / 2),
-#                                     self.processed_tag_list, num_recommendations)
-        self.right_img = ImageShowUI(self, ['google_button_pushed'])
-        self.right_img.observer_register('google_button_pushed', self, self.observer_google_button_pushed)
-        self.left_img.observer_register('picture_slider_moved', self.right_img,
-                                        self.right_img.observer_picture_slider_moved)
-        self.left_frame = self.left_img.img_frame
-        self.right_frame = self.right_img.img_frame
-
-        self.left_frame.grid(row=0, column=0)
-        self.right_frame.grid(row=0, column=1)
-        self.current_row = self.current_row + 5
-
-        #self.filename = self.processed_tag_list[self.current_tag]["myfilename"]
-        #im = load_image(self.filename)
-        #self.left_img.draw_image_to_canvas(im)
-        #self.right_img.draw_image_to_canvas(im)
-
-        self.scl_withintime = Scale(self.root_window, orient=HORIZONTAL, length=300, to=300,
-                                    command=self.cb_scale_withintime)
-        self.lbl_numberofpic = Label(self.root_window, text=" percen belül készült képek száma  xxxx db")
-        self.entry_renameto = Entry(self.root_window, text="default rename to", width=100)
-        self.google_buttons = []
-        self.lbl_current_settings = Label(self.root_window,
-                                          text="Source folder: {}       Exif DB file: {}".format(dir, db_file))
         self.create_widgets()
 
         self.left_img.cb_start()
-        self.right_img.cb_right()       # displaying the next picture by default on the right hand side
+        self.right_img.cb_right()  # displaying the next picture by default on the right hand side
 
     def create_widgets(self):
         self.create_menu()
-        self.current_row = self.current_row + 5
-        self.create_filename_area()
+        self.create_left_and_right_images()
+        self.create_timeslider_rename_area()
         self.create_bottom_info_area()
 
     def create_menu(self):
         # Creating first row of UI
         # This will be the menubar
+        self.menu_bar = Menu()
+        self.file_menu = Menu(self.menu_bar, tearoff=0)
+
         self.file_menu.add_command(label="Select folder ...", command=self.cb_file)
         self.file_menu.add_command(label="Select db file...", command=self.cb_datafile)
         self.file_menu.add_command(label="Save db ...", command=self.cb_save)
@@ -309,30 +353,71 @@ class RenameUI:
         self.menu_bar.add_cascade(label="Help")
         self.root_window.config(menu=self.menu_bar)
 
-    def create_filename_area(self):
+    def create_left_and_right_images(self):
+        self.left_img = ImageShowUI(self, self.publisher)
+        self.left_img.myside = UI_LEFT
+        self.publisher.observer_register("picture_slider_moved", self.left_img,
+                                         self.left_img.observer_picture_slider_moved)
+
+        self.right_img = ImageShowUI(self, self.publisher)
+        self.right_img.myside = UI_RIGHT
+        self.publisher.observer_register('picture_slider_moved', self.right_img,
+                                         self.right_img.observer_picture_slider_moved)
+
+        self.left_frame = self.left_img.img_frame
+        self.right_frame = self.right_img.img_frame
+
+        self.left_frame.grid(row=0, column=0)
+        self.right_frame.grid(row=0, column=1)
+        self.current_row = self.current_row + 5
+
+    def create_timeslider_rename_area(self):
+
+        frame_slider = Frame(self.root_window)
 
         # Creating next row of UI
         # slider for how many to pics display at once
-        lbl_a = Label(self.root_window, text=" A ")
-        lbl_a.grid(row=self.current_row, column=0)
+        lbl_a = Label(frame_slider, text=" Pictures taken within ")
 
+        self.scl_withintime = Scale(frame_slider, orient=HORIZONTAL, length=300, to=300,
+                                    command=self.cb_scale_withintime)
         self.scl_withintime.set(15)
-        self.scl_withintime.grid(row=self.current_row, column=1, columnspan=1)
-        self.lbl_numberofpic.grid(row=self.current_row, column=2)
+
+        self.lbl_numberofpic = Label(frame_slider, text=" minutes is xxxx.")
+
+        lbl_a.pack(side=LEFT)
+        self.scl_withintime.pack(side=LEFT)
+        self.lbl_numberofpic.pack(side=LEFT)
+        frame_slider.grid(row=self.current_row, columnspan=self.grid_hsize)
         self.current_row += 1
 
-        # Creating next row of UI
-        lbl_renameto = Label(self.root_window, text="Rename to")
-        lbl_renameto.grid(row=self.current_row, column=0)
-        self.entry_renameto.grid(row=self.current_row, column=1, columnspan=self.grid_hsize-1)
 
-        btn_ok = Button(self.root_window, text=" OK ", command=self.cb_rename)
-        btn_ok.grid(row=self.current_row, column=4)
+
+        # Creating next row of UI
+        # Rename to part
+        frame_rename = Frame(self.root_window)
+
+        lbl_renameto = Label(frame_rename, text="Rename to")
+
+
+        self.entry_renameto = Entry(frame_rename, text="default rename to", width=100)
+        #self.entry_renameto.grid(row=self.current_row, column=1, columnspan=self.grid_hsize - 1)
+
+        btn_ok = Button(frame_rename, text=" OK ", command=self.cb_rename)
+        #btn_ok.grid(row=self.current_row, column=4)
+
+        lbl_renameto.pack(side=LEFT)
+        self.entry_renameto.pack(side=LEFT)
+        btn_ok.pack(side=LEFT)
+        frame_rename.grid(row=self.current_row, columnspan=self.grid_hsize)
         self.current_row += 1
 
     def create_bottom_info_area(self):
         # Creating next row of UI
         # Name of working folder and DB
+        self.lbl_current_settings = Label(self.root_window,
+                                          text="Source folder: {}       Exif DB file: {}".format(self.dir, self.db_file))
+
         self.lbl_current_settings.grid(row=self.current_row, column=0, columnspan=self.grid_hsize)
         self.current_row += 1
 
@@ -344,37 +429,13 @@ class RenameUI:
         Will update all google labels, picture name, slider, settings info
         :return: nothing
         """
-
-        # Let's get the date of the picture
-        try:
-            a_date = "  " + self.processed_tag_list[self.current_tag]["EXIF DateTimeOriginal"].printable[:10]
-        except KeyError:
-            a_date = "1970:01:01 01:01:01"
-
-        a_date2 = re.sub(":", "", a_date)
-        a_date2 = a_date2 + "_"
-
-        # Let's update the name of the picture
-        self.lbl_currentpicname["text"] = self.processed_tag_list[self.current_tag]["myfilename"] + "   " \
-                                          + str(self.current_tag + 1) + " of " + str(len(self.processed_tag_list))
-
-        # Let's update the bottom info area
-        self.lbl_current_settings["text"] = "Source folder: " + self.dir + "           Exif DB file: " + self.db_file
-
-        #
-        # Calculate the number of pic within range
-        #
-        self.lbl_numberofpic["text"] = " percen belül készült képek száma " + str(self.number_of_pics_in_range()) \
-                                       + " db"
-
-        # Try to display the address
-        # Can get both Key and Index error
-        for i, b in enumerate(self.google_buttons):
-            try:
-                # print("Google{} {}".format(i, self.processed_tag_list[self.current_tag]["formatted_address_list"][i]))
-                b["text"] = a_date2 + self.processed_tag_list[self.current_tag]["formatted_address_list"][i]
-            except (KeyError, IndexError) as e:
-                b["text"] = a_date2 + ""
+        count = self.number_of_pics_in_range()
+        print("Number of pics in range {}".format(count))
+        a_txt = "minutes is " + str(count) + "."
+        self.lbl_numberofpic["text"] = a_txt
+        #TODO: uncomment this:
+        #cur_pos = self.left_img.get_currenttag()
+        #self.right_img.goto_tag(cur_pos + count)
 
     def number_of_pics_in_range(self):
         """
@@ -387,22 +448,11 @@ class RenameUI:
         max_delta = int(self.scl_withintime.get())
 
         max_delta = datetime.timedelta(minutes=max_delta).total_seconds()
+        self.current_tag=self.left_img.get_currenttag()
         for tag in self.processed_tag_list[self.current_tag:]:
             delta = jpgcollectinfo.timedifference(tag, self.processed_tag_list[self.current_tag])
             if abs(delta.total_seconds()) < max_delta:
                 count = count + 1
-
-        # TODO: APULAI, I don't think your implementation works reliably, check proposed mod above
-        # TODO: Also should it return 0 or 1 if we found only 1 picture (itself)???
-        # TODO: And why don't you consider pictures before the current one?
-        #        max_delta = datetime.timedelta(minutes=max_delta)
-        #        for tag in self.processed_tag_list[self.current_tag:]:
-        #            delta = jpgcollectinfo.timedifference(tag, self.processed_tag_list[self.current_tag])
-        #            # print(delta, max_delta)
-        #            if delta < max_delta:
-        #                count = count + 1
-        #            if delta > max_delta:
-        #                break
         return count
 
     def cb_file(self):
@@ -501,11 +551,21 @@ class RenameUI:
 
     def observer_google_button_pushed(self, button_text):
         """ If a google button was pushed, this callback function updates the renameto entry field """
-        
+
         print("Google button pushed, message received by observer:", button_text)
         self.entry_renameto.delete(0, END)
         self.entry_renameto.insert(0, button_text)
         self.update_all_widgets()
+
+    def observer_picture_slider_moved(self, position):
+        self.update_all_widgets()
+
+    def receive_message(self, message):
+        """
+        Default observer callback function
+        :return:
+        """
+        print("{} :received {}".format(self, message))
 
 
 def load_image(filename):
@@ -543,10 +603,15 @@ def load_image(filename):
 
 
 def main():
+    # We are creating a publisher, where you can subscibe to these events
+    pub = Publisher(("google_button_pushed", "picture_slider_moved"))
+
     c = RenameUI(CANVAS_WIDTH, CANVAS_HEIGHT, CANVAS_BG_COLOUR, GRID_HSIZE, GOOGLE_RECOMMENDATIONS, DEFAULTDIR,
-                 EXIF_DB_FILE)
+                 EXIF_DB_FILE, pub)
     if len(c.processed_tag_list) < 1:
         exit(1)
+    pub.observer_register('google_button_pushed', c, c.observer_google_button_pushed)
+    pub.observer_register('picture_slider_moved', c, c.observer_picture_slider_moved)
 
     print(c.processed_tag_list[c.current_tag]["myfilename"])
 
@@ -554,8 +619,8 @@ def main():
                                        "\n Run Scan ")
 
     # Init the pictures
-    #c.left_img.cb_start()
-    #c.right_img.cb_right()
+    # c.left_img.cb_start()
+    # c.right_img.cb_right()
 
     c.root_window.mainloop()
 
